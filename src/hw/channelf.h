@@ -20,14 +20,10 @@ typedef struct channelf_t
 {
    c3850_t c3850;
 
-   u8      dc0_upper;
-   u8      dc0_lower;
-   u8      dc1_upper;
-   u8      dc1_lower;
-   u8      pc0_upper;
-   u8      pc0_lower;
-   u8      pc1_upper;
-   u8      pc1_lower;
+   u16     dc0;
+   u16     dc1;
+   u16     pc0;
+   u16     pc1;
 
    u8      io  [IO_PORTS];
    u8      rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];

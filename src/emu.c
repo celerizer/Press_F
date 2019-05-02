@@ -19,24 +19,20 @@
 #define QU   system->c3850.scratchpad[0x0E]
 #define QL   system->c3850.scratchpad[0x0F]
 
-#define DC0U system->dc0_upper
-#define DC0L system->dc0_lower
-#define DC1U system->dc1_upper
-#define DC1L system->dc1_lower
-#define PC0U system->pc0_upper
-#define PC0L system->pc0_lower
-#define PC1U system->pc1_upper
-#define PC1L system->pc1_lower
-
-#define DC0  &system->dc0_upper
-#define DC1  &system->dc1_upper
-#define PC0  &system->pc0_upper
-#define PC1  &system->pc1_upper
+#define DC0  system->dc0
+#define DC1  system->dc1
+#define PC0  system->pc0
+#define PC1  system->pc1
 
 #define F8_OP(a) void a(channelf_t *system)
 
 static void (*operations[256])(channelf_t *system);
 static unsigned long instruction_count;
+
+u8 bcd(u8 value)
+{
+   return (((value >> 4) & 0x0F) * 10) + (value & 0x0F);
+}
 
 u16 read_16(u8 *src)
 {
@@ -51,11 +47,11 @@ u16 read_16(u8 *src)
    return value;
 }
 
-void write_16(u8 *dest, u16 src)
+void write_16(void *dest, u16 src)
 {
 #ifndef BIG_ENDIAN
-   dest[0] = src >> 8;
-   dest[1] = src & 0xFF;
+   (u8)dest[0] = src >> 8;
+   (u8)dest[1] = src & 0xFF;
 #else
    memcpy(dest, &src, 2);
 #endif
@@ -63,12 +59,12 @@ void write_16(u8 *dest, u16 src)
 
 u8 current_op(channelf_t *system)
 {
-   return system->rom[read_16(PC0)];
+   return system->rom[PC0];
 }
 
 u8 next_op(channelf_t *system)
 {
-   return system->rom[read_16(&PC0U) + 1];
+   return system->rom[PC0 + 1];
 }
 
 u8* isar(channelf_t *system)
@@ -79,8 +75,10 @@ u8* isar(channelf_t *system)
    /* Last 4 bits only */
    opcode &= 0x0F;
    if (opcode <= 0x0B)
+   {
       /* Address scratchpad directly for first 12 bytes */
       address = &system->c3850.scratchpad[opcode];
+   }
    else if (opcode != 0x0F)
       address = &system->c3850.scratchpad[ISAR];
    if (opcode == 0x0D)
@@ -124,7 +122,7 @@ u8 get_status(channelf_t *system, const u8 flag)
 
 void set_status(channelf_t *system, const u8 flag, u8 enable)
 {
-   W = enable ? W || flag : W & ~flag;
+   W = enable ? W | flag : W & ~flag;
 }
 
 void lr(u8 *dest, u8 *src)
@@ -147,15 +145,13 @@ void lr_dpchr_a(channelf_t *system)
 /* 08 */
 void lr_k_pc1(channelf_t *system)
 {
-   lr(&KU, &PC1U);
-   lr(&KL, &PC1L);
+   write_16(&KU, PC1);
 }
 
 /* 09 */
 void lr_pc1_k(channelf_t *system)
 {
-   lr(&PC1U, &KU);
-   lr(&PC1L, &KL);
+   write_16(&PC1, read_16(&KU));
 }
 
 /* 0A */
@@ -171,47 +167,43 @@ void lr_isar_a(channelf_t *system)
 }
 
 /* 0C */
-void pk(channelf_t *system)
+/* PK: Loads process counter into backup, K into process counter */
+/* TODO: Standardize 16 write */
+F8_OP(pk)
 {
-   lr(&PC1U, &PC0U);
-   lr(&PC1L, &PC0L);
-   lr(&PC0U, &QU);
-   lr(&PC0L, &QL);
+   PC1 = PC0;
+   PC0 = KU * 256;
+   PC0 += KL;
 }
 
 /* 0D */
 F8_OP(lr_pc0_q)
 {
-   lr(&PC0U, &QU);
-   lr(&PC0L, &QL);
+   write_16(&PC0, read_16(&QU));
 }
 
 /* 0E */
 F8_OP(lr_dc0_q)
 {
-   lr(&DC0U, &QU);
-   lr(&DC0L, &QL);
+   write_16(&DC0, read_16(&QU));
 }
 
 /* 0F */
 F8_OP(lr_q_dc0)
 {
-   lr(&QU, &DC0U);
-   lr(&QL, &DC0L);
+   write_16(&QU, DC0);
 }
 
 /* 10 */
 F8_OP(lr_h_dc0)
 {
-   lr(&HU, &DC0U);
-   lr(&HL, &DC0L);
+   write_16(&DC0, read_16(&HU));
 }
 
 /* 11 */
 F8_OP(lr_dc0_h)
 {
-   lr(&DC0U, &HU);
-   lr(&DC0L, &HL);
+   write_16(&HU, DC0);
 }
 
 /* 12 */
@@ -241,18 +233,17 @@ F8_OP(sl_a_4)
 /* 16 */
 F8_OP(lm)
 {
-   u8 rom_data = get_rom(system, read_16(&DC0U));
+   u8 rom_data = get_rom(system, DC0);
 
    lr(&A, &rom_data);
-   write_16(&DC0U, read_16(&DC0U) + 1);
+   DC0++;
 }
 
 /* 17 */
 F8_OP(st)
 {
    /* Does DC0U zero-fill? */
-   DC0L = A; 
-   write_16(&DC0U, read_16(&DC0U) + 1);
+   DC0 = A + 1;
 }
 
 /* 18 */
@@ -280,10 +271,10 @@ F8_OP(ei)
 }
 
 /* 1C */
+/* A destroyed? */
 F8_OP(pop)
 {
-   /* A destroyed? */
-   write_16(&PC0U, read_16(&PC1U));
+   PC0 = PC1;
 }
 
 /* 1D */
@@ -305,9 +296,48 @@ F8_OP(inc)
 }
 
 /* 25 */
+/* TODO: This stuff should be abstracted, and only ZERO works */
 F8_OP(ci)
 {
+   i8 immediate = (i8)next_op(system);
 
+   if (A - immediate == 0)
+      set_status(system, STATUS_ZERO, TRUE);
+   else
+      set_status(system, STATUS_ZERO, FALSE);
+}
+
+/* 2B */
+F8_OP(nop)
+{
+   /* NOP! */
+}
+
+/* 2C */
+F8_OP(xdc)
+{
+   DC0 ^= DC1;
+   DC1 ^= DC0;
+   DC0 ^= DC1;
+}
+
+/* 30 - 3F */
+/* DS r: Decrease scratchpad byte addressed by ISAR */
+F8_OP(ds)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      *address = *address - 1;
+}
+
+/* 40 - 4F */
+F8_OP(lr_a_r)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      lr(&A, address);
 }
 
 /* 50 - 5F */
@@ -322,11 +352,11 @@ F8_OP(lr_r_a)
 /* 60 - 67 */
 F8_OP(lisu)
 {
-   u8 immediate = (current_op(system) & 0x07) << 5;
+   u8 immediate = (current_op(system) & 0x07) << 3;
 
-   /* Mask to least significant 5 bits */
-   system->c3850.isar &= 0x1F;
-   system->c3850.isar |= immediate;
+   /* Mask to lower 3 bits, load new upper */
+   ISAR &= 0x07;
+   ISAR |= immediate;
 }
 
 /* 68 - 6F */
@@ -334,8 +364,8 @@ F8_OP(lisl)
 {
    u8 immediate = current_op(system) & 0x07;
 
-   /* Mask to most significant 5 bits */
-   ISAR &= 0xF8;
+   /* Mask to upper 3 bits, load new lower */
+   ISAR &= 0x38;
    ISAR |= immediate;
 }
 
@@ -355,14 +385,14 @@ F8_OP(lis)
 F8_OP(bt_n)
 {
    if ((current_op(system) & 0x07) & W)
-      write_16(&PC0U, read_16(&PC0U) + next_op(system) + 1);
+      PC0 += (i8)next_op(system) + 1;
 }
 
 /* 88 */
 F8_OP(am)
 {
-   A = read_16(&DC0U) + A;
-   write_16(&DC0U, read_16(&DC0U) + 1);
+   A = DC0 + A;
+   DC0++;
 }
 
 /* 89 */
@@ -374,47 +404,155 @@ F8_OP(amd)
 /* 8E */
 F8_OP(adc)
 {
-   write_16(&DC0U, read_16(&DC0U) + A);
+   DC0 += A;
 }
 
 /* 90 - 9F */
 F8_OP(bf)
 {
-   if (((current_op(system) & 0x07) & W) == 0)
-      write_16(&PC0U, read_16(&PC0U) + next_op(system) + 1);
+   if (((current_op(system) & 0x0F) & W) == 0)
+      PC0 += (i8)next_op(system) + 1;
+}
+
+/* 94 */
+F8_OP(bnz)
+{
+   if (!get_status(system, STATUS_ZERO))
+      PC0 += (i8)next_op(system) + 1;
+   else
+      PC0++;
 }
 
 /* A0 - AF */
 F8_OP(ins)
 {
-   u8 port;
+   /*u8 port;
 
    port = current_op(system) & 0x0F;
+   TODO */
+}
+
+/* B0 - BF */
+F8_OP(outs)
+{
    /* TODO */
 }
 
-u8 pressf_init()
+/*
+   C0 - CF 
+   AS (Add Source)
+   Add a register to the accumulator.
+*/
+F8_OP(as)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      A += *address;
+}
+
+/* 
+   D0 - DF 
+   ASD (Add Source Decimal)
+   Add a register to the accumulator as binary-coded decimal. 
+*/
+F8_OP(asd)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      A += bcd(*address);
+}
+
+/* 
+   E0 - EF
+   XS (eXclusive or Source)
+   Logical XOR a register into the accumulator.
+*/
+F8_OP(xs)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      A ^= *address;
+}
+
+/* 
+   F0 - FF
+   NS (aNd Source)
+   Logical AND a register into the accumulator.
+*/
+F8_OP(ns)
+{
+   u8 *address = isar(system);
+
+   if (address != NULL)
+      A &= *address;
+}
+
+u8 pressf_init(channelf_t *system)
 {
    u8 i = 0;
 
-   for (i = 0; i < 4; i++)
+   /* For testing BIOS */
+   for (i = 0x00; i < 0x40; i++)
+      system->c3850.scratchpad[i] = 0xFF;
+
+   for (i = 0x00; i < 0x04; i++)
    {
       operations[0x00 + i] = lr_a_dpchr;
       operations[0x04 + i] = lr_dpchr_a;
    }
-   for (i = 0; i < 16; i++)
+   operations[0x08] = lr_k_pc1;
+   operations[0x09] = lr_pc1_k;
+   operations[0x0A] = lr_a_isar;
+   operations[0x0B] = lr_isar_a;
+   operations[0x0C] = pk;
+   operations[0x0D] = lr_pc0_q;
+   operations[0x0E] = lr_q_dc0;
+   operations[0x0F] = lr_dc0_q;
+
+   for (i = 0x00; i < 0x08; i++)
    {
+      operations[0x60 + i] = lisu;
+      operations[0x68 + i] = lisl;
+   }
+   for (i = 0x00; i < 0x10; i++)
+   {
+      operations[0x30 + i] = ds;
+      operations[0x40 + i] = lr_a_r;
       operations[0x50 + i] = lr_r_a;
       operations[0x70 + i] = lis;
       operations[0x90 + i] = bf;
       operations[0xA0 + i] = ins;
+      operations[0xB0 + i] = outs;
+      operations[0xC0 + i] = as;
+      operations[0xD0 + i] = asd;
+      operations[0xE0 + i] = xs;
+      operations[0xF0 + i] = ns;
    }
-   operations[0x0A] = lr_a_isar;
-   operations[0x0B] = lr_isar_a;
+   operations[0x10] = lr_dc0_h;
+   operations[0x11] = lr_h_dc0;
+   operations[0x12] = sr_a;
+   operations[0x13] = sl_a;
+   operations[0x14] = sr_a_4;
+   operations[0x15] = sl_a_4;
+   operations[0x16] = lm;
+   operations[0x17] = st;
+   operations[0x18] = com;
+   operations[0x19] = lnk;
+   operations[0x1A] = di;
+   operations[0x1B] = ei;
+   operations[0x1C] = pop;
+   operations[0x1D] = lr_w_j;
+   operations[0x1E] = lr_j_w;
    operations[0x1F] = inc;
+
+   operations[0x25] = ci;
    operations[0x70] = clr;
    operations[0x89] = amd;
    operations[0x8E] = adc;
+   operations[0x94] = bnz;
 
    return TRUE;
 }
@@ -426,8 +564,8 @@ void pressf_step(channelf_t *system)
    printf("========\n");
    if (operations[op] != NULL)
    {
-      operations[op](system);
-      printf("PC0: %04X | PC1: %04X | DC0: %04X | DC1: %04X\n", read_16(PC0), read_16(PC1), read_16(DC0), read_16(DC1));
+      printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
+      printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
       printf("Operation: %02X\n", op);
       printf("--------\n");
       for (u8 i = 0; i < 4; i++)
@@ -437,11 +575,13 @@ void pressf_step(channelf_t *system)
             printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
          printf("|\n");
       }
-      write_16(PC0, read_16(PC0) + 1);
+
+      operations[op](system);
+      PC0++;
    }
    else
    {
-      printf("Unknown or unsupported opcode %02X at %04X\n", op, read_16(PC0));
+      printf("Unknown or unsupported opcode %02X at %04X\n", op, PC0);
       exit(0);
    }
 }
@@ -452,7 +592,7 @@ u8 pressf_run(channelf_t *system)
       return FALSE;
    else
    {
-      instruction_count = 2000000;
+      instruction_count = 200000;
       do
       {
          pressf_step(system);
@@ -460,6 +600,7 @@ u8 pressf_run(channelf_t *system)
       } while (instruction_count > 0);
    }
 
+   exit(0); //remove
    return TRUE;
 }
 
