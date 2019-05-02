@@ -1,0 +1,37 @@
+#ifndef PRESSF_CHANNELF_H
+#define PRESSF_CHANNELF_H
+
+#include "3850.h"
+
+#define IO_PORTS      8
+
+#define ROM_BIOS_A    0x0000
+#define ROM_BIOS_B    0x0800
+#define ROM_CARTRIDGE 0x1000
+
+/* BIOS size is exact, cart size is a maximum. (inaccurate?)
+   The highest cart size in the No-Intro set is 0x1800 bytes. */
+#define ROM_BIOS_SIZE 0x0800
+#define ROM_CART_SIZE 0xF000
+
+#define VRAM_SIZE     0x1000
+
+typedef struct channelf_t
+{
+   c3850_t c3850;
+
+   u8      dc0_upper;
+   u8      dc0_lower;
+   u8      dc1_upper;
+   u8      dc1_lower;
+   u8      pc0_upper;
+   u8      pc0_lower;
+   u8      pc1_upper;
+   u8      pc1_lower;
+
+   u8      io  [IO_PORTS];
+   u8      rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];
+   u8      vram[VRAM_SIZE];
+} channelf_t;
+
+#endif
