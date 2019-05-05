@@ -1,27 +1,24 @@
 LOCAL_PATH := $(call my-dir)
-BASE_DIR   := $(LOCAL_PATH)/../../..
+BASE_DIR   := $(LOCAL_PATH)/../../../..
 CORE_DIR   := $(BASE_DIR)/src
 
 INCFLAGS := -I$(CORE_DIR) \
-   -I$(CORE_DIR)/snddrv/quasi88 \
-   -I$(CORE_DIR)/snddrv/src \
-   -I$(CORE_DIR)/snddrv/src/sound \
-   -I$(CORE_DIR)/snddrv/quasi88 \
-   -I$(CORE_DIR)/fmgen \
-   -I$(CORE_DIR)/LIBRETRO
+   -I$(CORE_DIR)/hw
+
+INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include \
+   -I$(LIBRETRO_COMM_DIR)/include/compat \
+   -I$(LIBRETRO_COMM_DIR)/include/encodings \
+   -I$(LIBRETRO_COMM_DIR)/include/file \
+   -I$(LIBRETRO_COMM_DIR)/include/streams \
+   -I$(LIBRETRO_COMM_DIR)/include/string \
+   -I$(LIBRETRO_COMM_DIR)/include/vfs
 
 include $(BASE_DIR)/Makefile.common
 
-#ROMDIR = rom/
-#DISKDIR = disk/
-#TAPEDIR = tape/
-
-COREFLAGS := -DROM_DIR='"$(ROMDIR)"' -DDISK_DIR='"$(DISKDIR)"' -DTAPE_DIR='"$(TAPEDIR)"' \
-   -DQUASI88_MINI -DCLIB_DECL='' -DUSE_SOUND=1 -DUSE_FMGEN=1-DCLIB_DECL $(INCFLAGS) -D__LIBRETRO__
+COREFLAGS := -DBIG_ENDIAN=0 -D__LIBRETRO__
 
 include $(CLEAR_VARS)
 LOCAL_MODULE    := retro
-LOCAL_DISABLE_FORMAT_STRING_CHECKS := true
 LOCAL_SRC_FILES := $(SOURCES_C) $(SOURCES_CXX)
 LOCAL_CFLAGS    := $(COREFLAGS)
 LOCAL_CPPFLAGS  := $(COREFLAGS)
