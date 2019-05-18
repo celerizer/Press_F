@@ -130,50 +130,64 @@ void lr(u8 *dest, u8 *src)
    *dest = *src;
 }
 
-/* 00 - 03 */
+/* 
+   00 - 03
+   LR A, DPCHR
+   Load a byte from either K or Q into the accumulator (see dpchr()).
+*/
 F8_OP(lr_a_dpchr)
 {
    lr(&A, dpchr(system));
 }
 
-/* 04 - 07 */
-void lr_dpchr_a(channelf_t *system)
+/* 
+   04 - 07
+   LR DPCHR, A
+   Load the accumulator into a byte from either K or Q (see dpchr()).
+*/
+F8_OP(lr_dpchr_a)
 {
    lr(dpchr(system), &A);
 }
 
-/* 08 */
-void lr_k_pc1(channelf_t *system)
+/*
+   08
+   LR K, PC1
+   Load a word into K from the backup process counter.
+*/
+F8_OP(lr_k_pc1)
 {
    write_16(&KU, PC1);
 }
 
-/* 09 */
-void lr_pc1_k(channelf_t *system)
+/*
+   09
+   LR PC1, K
+   Load a word from the backup process counter into K.
+*/
+F8_OP(lr_pc1_k)
 {
    write_16(&PC1, read_16(&KU));
 }
 
 /* 0A */
-void lr_a_isar(channelf_t *system)
+F8_OP(lr_a_isar)
 {
    lr(&A, &ISAR);
 }
 
 /* 0B */
-void lr_isar_a(channelf_t *system)
+F8_OP(lr_isar_a)
 {
    lr(&ISAR, &A);
 }
 
 /* 0C */
 /* PK: Loads process counter into backup, K into process counter */
-/* TODO: Standardize 16 write */
 F8_OP(pk)
 {
    PC1 = PC0;
-   PC0 = KU * 256;
-   PC0 += KL;
+   PC0 = read_16(&KU);
 }
 
 /* 0D */
@@ -206,28 +220,38 @@ F8_OP(lr_dc0_h)
    write_16(&HU, DC0);
 }
 
+/* ======================================================= F8 shift instructions */
+void shift(channelf_t *system, u8 right, u8 amount)
+{
+   A = right ? A << amount : A >> amount;
+   set_status(status, STATUS_OVERFLOW, FALSE);
+   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    FALSE);
+   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+}
+
 /* 12 */
 F8_OP(sr_a)
 {
-   A <<= 1;
+   shift(system, TRUE, 1);
 }
 
 /* 13 */
 F8_OP(sl_a)
 {
-   A >>= 1;
+   shift(system, FALSE, 1);
 }
 
 /* 14 */
 F8_OP(sr_a_4)
 {
-   A <<= 4;
+   shift(system, TRUE, 4);
 }
 
 /* 15 */
 F8_OP(sl_a_4)
 {
-   A >>= 4;
+   shift(system, FALSE, 4);
 }
 
 /* 16 */
@@ -250,12 +274,20 @@ F8_OP(st)
 F8_OP(com)
 {
    A ^= A;
+   set_status(status, STATUS_OVERFLOW, FALSE);
+   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    FALSE);
+   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
 }
 
 /* 19 */
 F8_OP(lnk)
 {
+   set_status(status, STATUS_OVERFLOW, 0x100 - A > STATUS_CARRY ? TRUE : FALSE);
+   set_status(status, STATUS_CARRY,    0x100 - A > STATUS_CARRY ? TRUE : FALSE);
    A += get_status(system, STATUS_CARRY) ? STATUS_CARRY : 0;
+   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
+   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
 }
 
 /* 1A */
@@ -293,6 +325,17 @@ F8_OP(lr_j_w)
 F8_OP(inc)
 {
    A++;
+   set_status(status, STATUS_OVERFLOW, A == 0x80 ? TRUE : FALSE);
+   set_status(status, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
+   set_status(status, STATUS_CARRY,    A == 0x80 ? TRUE : FALSE);
+   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+}
+
+/* 20 */
+F8_OP(li)
+{
+   A = next_op(system);
+   PC0++;
 }
 
 /* 25 */
