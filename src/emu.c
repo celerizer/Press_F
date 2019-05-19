@@ -34,12 +34,12 @@ u8 bcd(u8 value)
    return (((value >> 4) & 0x0F) * 10) + (value & 0x0F);
 }
 
-u16 read_16(u8 *src)
+u16 read_16(void *src)
 {
    u16 value;
 
 #ifndef BIG_ENDIAN
-   value = (src[0] << 8) + src[1];
+   value = (((u8*)src)[0] << 8) + ((u8*)src)[1];
 #else
    memcpy(&value, src, 2);
 #endif
@@ -50,8 +50,8 @@ u16 read_16(u8 *src)
 void write_16(void *dest, u16 src)
 {
 #ifndef BIG_ENDIAN
-   (u8)dest[0] = src >> 8;
-   (u8)dest[1] = src & 0xFF;
+   ((u8*)dest)[0] = src >> 8;
+   ((u8*)dest)[1] = src & 0xFF;
 #else
    memcpy(dest, &src, 2);
 #endif
@@ -224,7 +224,7 @@ F8_OP(lr_dc0_h)
 void shift(channelf_t *system, u8 right, u8 amount)
 {
    A = right ? A << amount : A >> amount;
-   set_status(status, STATUS_OVERFLOW, FALSE);
+   set_status(system, STATUS_OVERFLOW, FALSE);
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    FALSE);
    set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
@@ -274,7 +274,7 @@ F8_OP(st)
 F8_OP(com)
 {
    A ^= A;
-   set_status(status, STATUS_OVERFLOW, FALSE);
+   set_status(system, STATUS_OVERFLOW, FALSE);
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    FALSE);
    set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
@@ -283,8 +283,8 @@ F8_OP(com)
 /* 19 */
 F8_OP(lnk)
 {
-   set_status(status, STATUS_OVERFLOW, 0x100 - A > STATUS_CARRY ? TRUE : FALSE);
-   set_status(status, STATUS_CARRY,    0x100 - A > STATUS_CARRY ? TRUE : FALSE);
+   set_status(system, STATUS_OVERFLOW, 0x100 - A > STATUS_CARRY ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    0x100 - A > STATUS_CARRY ? TRUE : FALSE);
    A += get_status(system, STATUS_CARRY) ? STATUS_CARRY : 0;
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
    set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
@@ -321,14 +321,19 @@ F8_OP(lr_j_w)
    lr(&J, &W);
 }
 
+void add(channelf_t *system, u8 *dest, u8 src)
+{
+   *dest += src;
+   set_status(system, STATUS_OVERFLOW, *dest < src  ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,     *dest == 0   ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    *dest < src  ? TRUE : FALSE);
+   set_status(system, STATUS_POSITIVE, *dest & 0x80 ? TRUE : FALSE);
+}
+
 /* 1F */
 F8_OP(inc)
 {
-   A++;
-   set_status(status, STATUS_OVERFLOW, A == 0x80 ? TRUE : FALSE);
-   set_status(status, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
-   set_status(status, STATUS_CARRY,    A == 0x80 ? TRUE : FALSE);
-   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+   add(system, &A, 1);
 }
 
 /* 20 */
@@ -338,16 +343,96 @@ F8_OP(li)
    PC0++;
 }
 
+u8 get_immediate(channelf_t *system)
+{
+   u8 immediate = next_op(system);
+
+   PC0++;
+
+   return immediate;
+}
+
+/* Hack? We add 0 to accumulator to set flags */
+/* 21 */
+F8_OP(ni)
+{
+   A &= get_immediate(system);
+   add(system, &A, 0);
+}
+
+/* 22 */
+F8_OP(oi)
+{
+   A |= get_immediate(system);
+   add(system, &A, 0);
+}
+
+/* 23 */
+F8_OP(xi)
+{
+   A ^= get_immediate(system);
+   add(system, &A, 0);
+}
+
+/* 24 */
+F8_OP(ai)
+{
+   add(system, &A, get_immediate(system));
+}
+
 /* 25 */
-/* TODO: This stuff should be abstracted, and only ZERO works */
+/* TODO: Subtract function */
 F8_OP(ci)
 {
-   i8 immediate = (i8)next_op(system);
+   i8 immediate = (i8)get_immediate(system);
 
    if (A - immediate == 0)
       set_status(system, STATUS_ZERO, TRUE);
    else
       set_status(system, STATUS_ZERO, FALSE);
+}
+
+/* 26 */
+/* TODO: Data bus, ports */
+F8_OP(in)
+{
+   exit(0);//add(system, &A, 0);
+}
+
+/* 27 */
+F8_OP(out)
+{
+   exit(0);//add(system, &A, 0);
+}
+
+/* 28 */
+F8_OP(pi)
+{
+   u8 i = get_immediate(system);
+
+   /* Make this look better */
+   A = i;
+   PC1 = PC0 + 1;
+   PC0 = get_immediate(system);
+   PC0 += A * 0x100;
+}
+
+/* 29 */
+F8_OP(jmp)
+{
+   u8 i = get_immediate(system);
+
+   /* Make this look better */
+   A = i;
+   PC0 = get_immediate(system);
+   PC0 += A * 0x100;
+}
+
+/* 2A */
+F8_OP(dci)
+{
+   write_16(&DC0, read_16(&DC0));
+   PC0 += 2;
 }
 
 /* 2B */
@@ -461,7 +546,7 @@ F8_OP(bf)
 F8_OP(bnz)
 {
    if (!get_status(system, STATUS_ZERO))
-      PC0 += (i8)next_op(system) + 1;
+      PC0 += (i8)next_op(system);
    else
       PC0++;
 }
@@ -533,6 +618,15 @@ F8_OP(ns)
       A &= *address;
 }
 
+/*
+   2D - 2F
+   Invalid / Undefined opcode
+*/
+F8_OP(invalid_opcode)
+{
+   printf("Invalid opcode %02X at %04X\n", current_op(system), PC0);
+}
+
 u8 pressf_init(channelf_t *system)
 {
    u8 i = 0;
@@ -590,8 +684,24 @@ u8 pressf_init(channelf_t *system)
    operations[0x1D] = lr_w_j;
    operations[0x1E] = lr_j_w;
    operations[0x1F] = inc;
-
+   
+   operations[0x20] = li;
+   operations[0x21] = ni;
+   operations[0x22] = oi;
+   operations[0x23] = xi;
+   operations[0x24] = ai;
    operations[0x25] = ci;
+   operations[0x26] = in;
+   operations[0x27] = out;
+   operations[0x28] = pi;
+   operations[0x29] = jmp;
+   operations[0x2A] = dci;
+   operations[0x2B] = nop;
+   operations[0x2C] = xdc;
+   operations[0x2D] = invalid_opcode;
+   operations[0x2E] = invalid_opcode;
+   operations[0x2F] = invalid_opcode;
+
    operations[0x70] = clr;
    operations[0x89] = amd;
    operations[0x8E] = adc;
@@ -635,7 +745,7 @@ u8 pressf_run(channelf_t *system)
       return FALSE;
    else
    {
-      instruction_count = 200000;
+      instruction_count = 5000;
       do
       {
          pressf_step(system);
