@@ -15,13 +15,15 @@ ifneq (,$(findstring msvc2003,$(platform)))
 INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
 endif
 
-CFLAGS += -DBIG_ENDIAN=0
+CFLAGS := -DBIG_ENDIAN=0
 
-CXXFLAGS += $(CFLAGS)
-
-SOURCES_C := $(CORE_DIR)/emu.c \
+SOURCES_C := \
+   $(CORE_DIR)/emu.c \
    $(CORE_DIR)/file.c \
-   $(CORE_DIR)/frontend/libretro/libretro.c \
+   $(CORE_DIR)/frontend/libretro/libretro.c
+
+ifneq ($(STATIC_LINKING), 1)
+SOURCES_C += \
    $(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
    $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
    $(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
@@ -30,3 +32,4 @@ SOURCES_C := $(CORE_DIR)/emu.c \
    $(LIBRETRO_COMM_DIR)/streams/file_stream.c \
    $(LIBRETRO_COMM_DIR)/string/stdstring.c \
    $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c
+endif
