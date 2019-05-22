@@ -3,11 +3,13 @@
 #include <string/stdstring.h>
 
 #include "file.h"
+#include "screen.h"
 #include "emu.h"
 
 static channelf_t retro_channelf;
 
-static char system_dir[1024];
+static u16  screen_buffer[128 * 64];
+static char system_dir   [1024];
 
 /* libretro callbacks */
 static retro_audio_sample_t audio_cb;
@@ -114,8 +116,9 @@ void retro_unload_game()
 
 void retro_run(void)
 {
-   pressf_run(&retro_channelf);
-   video_cb(retro_channelf.vram, 128, 64, 128);
+   pressf_step(&retro_channelf);
+   draw_frame_rgb565(retro_channelf.vram, screen_buffer);
+   video_cb(screen_buffer, 128, 64, 128 * 2);
 }
 
 void retro_get_system_info(struct retro_system_info *info)

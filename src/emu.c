@@ -57,6 +57,25 @@ void write_16(void *dest, u16 src)
 #endif
 }
 
+u8 get_status(channelf_t *system, const u8 flag)
+{
+   return (W & flag) != 0;
+}
+
+void set_status(channelf_t *system, const u8 flag, u8 enable)
+{
+   W = enable ? W | flag : W & ~flag;
+}
+
+void add(channelf_t *system, u8 *dest, u8 src)
+{
+   *dest += src;
+   set_status(system, STATUS_OVERFLOW, *dest < src  ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,     *dest == 0   ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    *dest < src  ? TRUE : FALSE);
+   set_status(system, STATUS_POSITIVE, *dest & 0x80 ? TRUE : FALSE);
+}
+
 u8 current_op(channelf_t *system)
 {
    return system->rom[PC0];
@@ -65,6 +84,15 @@ u8 current_op(channelf_t *system)
 u8 next_op(channelf_t *system)
 {
    return system->rom[PC0 + 1];
+}
+
+u8 get_immediate(channelf_t *system)
+{
+   u8 immediate = next_op(system);
+
+   PC0++;
+
+   return immediate;
 }
 
 u8* isar(channelf_t *system)
@@ -115,16 +143,6 @@ u8 get_rom(channelf_t *system, const u16 address)
    return system->rom[address];
 }
 
-u8 get_status(channelf_t *system, const u8 flag)
-{
-   return (W & flag) != 0;
-}
-
-void set_status(channelf_t *system, const u8 flag, u8 enable)
-{
-   W = enable ? W | flag : W & ~flag;
-}
-
 void lr(u8 *dest, u8 *src)
 {
    *dest = *src;
@@ -163,11 +181,11 @@ F8_OP(lr_k_pc1)
 /*
    09
    LR PC1, K
-   Load a word from the backup process counter into K.
+   Load a word into the backup process counter from K.
 */
 F8_OP(lr_pc1_k)
 {
-   write_16(&PC1, read_16(&KU));
+   PC1 = read_16(&KU);
 }
 
 /* 0A */
@@ -273,7 +291,7 @@ F8_OP(st)
 /* 18 */
 F8_OP(com)
 {
-   A ^= A;
+   A ^= 0xFF;
    set_status(system, STATUS_OVERFLOW, FALSE);
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    FALSE);
@@ -321,35 +339,24 @@ F8_OP(lr_j_w)
    lr(&J, &W);
 }
 
-void add(channelf_t *system, u8 *dest, u8 src)
-{
-   *dest += src;
-   set_status(system, STATUS_OVERFLOW, *dest < src  ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,     *dest == 0   ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    *dest < src  ? TRUE : FALSE);
-   set_status(system, STATUS_POSITIVE, *dest & 0x80 ? TRUE : FALSE);
-}
-
-/* 1F */
+/*
+   1F
+   INC (INCrement)
+   Add 1 to the accumulator
+*/
 F8_OP(inc)
 {
    add(system, &A, 1);
 }
 
-/* 20 */
+/* 
+   20
+   LI (Load Immediate)
+   Set accumulator to a specified 8-bit value
+*/
 F8_OP(li)
 {
-   A = next_op(system);
-   PC0++;
-}
-
-u8 get_immediate(channelf_t *system)
-{
-   u8 immediate = next_op(system);
-
-   PC0++;
-
-   return immediate;
+   A = get_immediate(system);
 }
 
 /* Hack? We add 0 to accumulator to set flags */
@@ -392,27 +399,36 @@ F8_OP(ci)
       set_status(system, STATUS_ZERO, FALSE);
 }
 
-/* 26 */
-/* TODO: Data bus, ports */
+/* 
+   26
+   IN (INput from port)
+   Set accumulator to the value of an 8-bit port number
+*/
 F8_OP(in)
 {
-   exit(0);//add(system, &A, 0);
+   u8 port = get_immediate(system) & (IO_PORTS - 1);
+
+   A = system->io[port];
+   add(system, &A, 0);
 }
 
-/* 27 */
+/* 
+   27
+   OUT (OUTput to port)
+   Set the value of an 8-bit port number to accumulator
+*/
 F8_OP(out)
 {
-   exit(0);//add(system, &A, 0);
+   u8 port = get_immediate(system) & (IO_PORTS - 1);
+
+   system->io[port] = A;
 }
 
 /* 28 */
 F8_OP(pi)
 {
-   u8 i = get_immediate(system);
-
-   /* Make this look better */
-   A = i;
-   PC1 = PC0 + 1;
+   A = get_immediate(system);
+   PC1 = PC0;
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
 }
@@ -420,10 +436,7 @@ F8_OP(pi)
 /* 29 */
 F8_OP(jmp)
 {
-   u8 i = get_immediate(system);
-
-   /* Make this look better */
-   A = i;
+   A = get_immediate(system);
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
 }
@@ -456,7 +469,7 @@ F8_OP(ds)
    u8 *address = isar(system);
 
    if (address != NULL)
-      *address = *address - 1;
+      add(system, address, 0xFF);
 }
 
 /* 40 - 4F */
@@ -513,21 +526,48 @@ F8_OP(lis)
 F8_OP(bt_n)
 {
    if ((current_op(system) & 0x07) & W)
-      PC0 += (i8)next_op(system) + 1;
+      PC0 += (i8)get_immediate(system);
 }
 
 /* 88 */
 F8_OP(am)
 {
-   A = DC0 + A;
+   add(system, &A, DC0);
    DC0++;
 }
 
 /* 89 */
 F8_OP(amd)
 {
-
+   add(system, &A, bcd(DC0));
+   DC0++;
 }
+
+/* 8A */
+F8_OP(nm)
+{
+   A &= DC0;
+   DC0++;
+   add(system, &A, 0);
+}
+
+/* 8B */
+F8_OP(om)
+{
+   A |= DC0;
+   DC0++;
+   add(system, &A, 0);
+}
+
+/* 8C */
+F8_OP(xm)
+{
+   A ^= DC0;
+   DC0++;
+   add(system, &A, 0);
+}
+
+/* 8D */
 
 /* 8E */
 F8_OP(adc)
@@ -539,31 +579,45 @@ F8_OP(adc)
 F8_OP(bf)
 {
    if (((current_op(system) & 0x0F) & W) == 0)
-      PC0 += (i8)next_op(system) + 1;
-}
-
-/* 94 */
-F8_OP(bnz)
-{
-   if (!get_status(system, STATUS_ZERO))
       PC0 += (i8)next_op(system);
    else
       PC0++;
 }
 
-/* A0 - AF */
+/* 
+   A0 - AF
+   INS (INput from port (Short)) 
+   Set accumulator to the value of a four-bit port number
+*/
 F8_OP(ins)
 {
-   /*u8 port;
+   u8 port = current_op(system) & 0x0F;
 
-   port = current_op(system) & 0x0F;
-   TODO */
+   A = system->io[port];
+   add(system, &A, 0);
 }
 
-/* B0 - BF */
+void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
+{
+   u16 pixel = x * y;
+   u8  index = pixel & 3;
+
+   system->vram[pixel/4] |= ((value & 3) << ((3 - index) * 2)); 
+}
+
+/* 
+   B0 - BF
+   OUTS (OUTput to port (Short)) 
+   Set the value of a four-bit port number to the accumulator
+*/
 F8_OP(outs)
 {
-   /* TODO */
+   u8 port = current_op(system) & 0x0F;
+
+   system->io[port] = A;
+   /* Hack for testing, remove this */
+   if (port == 0 && A == 0x50)
+      vram_write(system, (system->io[4] & 0x7E) >> 1, system->io[5] >> 2, system->io[1]);
 }
 
 /*
@@ -576,7 +630,7 @@ F8_OP(as)
    u8 *address = isar(system);
 
    if (address != NULL)
-      A += *address;
+      add(system, &A, *address);
 }
 
 /* 
@@ -589,7 +643,7 @@ F8_OP(asd)
    u8 *address = isar(system);
 
    if (address != NULL)
-      A += bcd(*address);
+      add(system, &A, bcd(*address));
 }
 
 /* 
@@ -653,6 +707,7 @@ u8 pressf_init(channelf_t *system)
    {
       operations[0x60 + i] = lisu;
       operations[0x68 + i] = lisl;
+      operations[0x80 + i] = bt_n;
    }
    for (i = 0x00; i < 0x10; i++)
    {
@@ -703,9 +758,9 @@ u8 pressf_init(channelf_t *system)
    operations[0x2F] = invalid_opcode;
 
    operations[0x70] = clr;
+   operations[0x88] = am;
    operations[0x89] = amd;
    operations[0x8E] = adc;
-   operations[0x94] = bnz;
 
    return TRUE;
 }
@@ -719,7 +774,10 @@ void pressf_step(channelf_t *system)
    {
       printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
       printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
-      printf("Operation: %02X\n", op);
+      printf("PORT:");
+      for (u8 i = 0; i < 16; i++)
+         printf(" %02X", system->io[i]);
+      printf("\nOperation: %02X\n", op);
       printf("--------\n");
       for (u8 i = 0; i < 4; i++)
       {
@@ -745,7 +803,7 @@ u8 pressf_run(channelf_t *system)
       return FALSE;
    else
    {
-      instruction_count = 5000;
+      instruction_count = 100000;
       do
       {
          pressf_step(system);

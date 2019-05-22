@@ -3,7 +3,7 @@
 
 #include "3850.h"
 
-#define IO_PORTS      8
+#define IO_PORTS      16
 
 #define ROM_BIOS_A    0x0000
 #define ROM_BIOS_B    0x0800
@@ -12,9 +12,9 @@
 /* BIOS size is exact, cart size is a maximum. (inaccurate?)
    The highest cart size in the No-Intro set is 0x1800 bytes. */
 #define ROM_BIOS_SIZE 0x0800
-#define ROM_CART_SIZE 0xF000
+#define ROM_CART_SIZE 0x1800
 
-#define VRAM_SIZE     0x1000
+#define VRAM_SIZE     0x0800
 
 typedef struct channelf_t
 {
