@@ -69,11 +69,14 @@ void set_status(channelf_t *system, const u8 flag, u8 enable)
 
 void add(channelf_t *system, u8 *dest, u8 src)
 {
+   /* TODO: Make this less awful */
+   u8 previous = *dest;
+
    *dest += src;
-   set_status(system, STATUS_OVERFLOW, *dest < src  ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,     *dest == 0   ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    *dest < src  ? TRUE : FALSE);
-   set_status(system, STATUS_POSITIVE, *dest & 0x80 ? TRUE : FALSE);
+   set_status(system, STATUS_OVERFLOW, (*dest >> 7) != (previous >> 7) ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,     *dest == 0      ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    *dest < src     ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN, !(*dest & 0x80) ? TRUE : FALSE);
 }
 
 u8 current_op(channelf_t *system)
@@ -211,29 +214,29 @@ F8_OP(pk)
 /* 0D */
 F8_OP(lr_pc0_q)
 {
-   write_16(&PC0, read_16(&QU));
+   PC0 = read_16(&QU);
 }
 
 /* 0E */
-F8_OP(lr_dc0_q)
-{
-   write_16(&DC0, read_16(&QU));
-}
-
-/* 0F */
 F8_OP(lr_q_dc0)
 {
    write_16(&QU, DC0);
 }
 
-/* 10 */
-F8_OP(lr_h_dc0)
+/* 0F */
+F8_OP(lr_dc0_q)
 {
-   write_16(&DC0, read_16(&HU));
+   DC0 = read_16(&QU);
+}
+
+/* 10 */
+F8_OP(lr_dc0_h)
+{
+   DC0 = read_16(&HU);
 }
 
 /* 11 */
-F8_OP(lr_dc0_h)
+F8_OP(lr_h_dc0)
 {
    write_16(&HU, DC0);
 }
@@ -241,11 +244,11 @@ F8_OP(lr_dc0_h)
 /* ======================================================= F8 shift instructions */
 void shift(channelf_t *system, u8 right, u8 amount)
 {
-   A = right ? A << amount : A >> amount;
+   A = right ? A >> amount : A << amount;
    set_status(system, STATUS_OVERFLOW, FALSE);
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    FALSE);
-   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN, !(A & 0x80) ? TRUE : FALSE);
 }
 
 /* 12 */
@@ -275,9 +278,7 @@ F8_OP(sl_a_4)
 /* 16 */
 F8_OP(lm)
 {
-   u8 rom_data = get_rom(system, DC0);
-
-   lr(&A, &rom_data);
+   A = get_rom(system, DC0);
    DC0++;
 }
 
@@ -292,10 +293,7 @@ F8_OP(st)
 F8_OP(com)
 {
    A ^= 0xFF;
-   set_status(system, STATUS_OVERFLOW, FALSE);
-   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    FALSE);
-   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+   add(system, &A, 0);
 }
 
 /* 19 */
@@ -305,7 +303,7 @@ F8_OP(lnk)
    set_status(system, STATUS_CARRY,    0x100 - A > STATUS_CARRY ? TRUE : FALSE);
    A += get_status(system, STATUS_CARRY) ? STATUS_CARRY : 0;
    set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
-   set_status(system, STATUS_POSITIVE, A & 0x80 ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN,     !(A & 0x80) ? TRUE : FALSE);
 }
 
 /* 1A */
@@ -324,7 +322,7 @@ F8_OP(ei)
 /* A destroyed? */
 F8_OP(pop)
 {
-   PC0 = PC1;
+   PC0 = PC1-1;//hack
 }
 
 /* 1D */
@@ -391,12 +389,12 @@ F8_OP(ai)
 /* TODO: Subtract function */
 F8_OP(ci)
 {
-   i8 immediate = (i8)get_immediate(system);
+   u8 immediate = get_immediate(system);
 
-   if (A - immediate == 0)
-      set_status(system, STATUS_ZERO, TRUE);
-   else
-      set_status(system, STATUS_ZERO, FALSE);
+   set_status(system, STATUS_OVERFLOW, A > immediate          ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,  A == immediate            ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY, A < immediate             ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN,  !((immediate - A) & 0x80) ? TRUE : FALSE);
 }
 
 /* 
@@ -428,9 +426,10 @@ F8_OP(out)
 F8_OP(pi)
 {
    A = get_immediate(system);
-   PC1 = PC0;
+   PC1 = PC0 + 2;//hack
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
+   PC0--; //hack
 }
 
 /* 29 */
@@ -439,13 +438,14 @@ F8_OP(jmp)
    A = get_immediate(system);
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
+   PC0--; //hack
 }
 
 /* 2A */
 F8_OP(dci)
 {
-   write_16(&DC0, read_16(&DC0));
-   PC0 += 2;
+   DC0 = get_immediate(system) * 0x100;
+   DC0 += get_immediate(system);
 }
 
 /* 2B */
@@ -610,6 +610,13 @@ void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
    OUTS (OUTput to port (Short)) 
    Set the value of a four-bit port number to the accumulator
 */
+unsigned char reverse(unsigned char b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
 F8_OP(outs)
 {
    u8 port = current_op(system) & 0x0F;
@@ -617,7 +624,7 @@ F8_OP(outs)
    system->io[port] = A;
    /* Hack for testing, remove this */
    if (port == 0 && A == 0x50)
-      vram_write(system, (system->io[4] & 0x7E) >> 1, system->io[5] >> 2, system->io[1]);
+      vram_write(system, reverse(system->io[4] ^ 0xFF) >> 1, reverse(system->io[5] ^ 0xFF) >> 2, (system->io[1] & 0xC0) >> 6);
 }
 
 /*
@@ -657,6 +664,7 @@ F8_OP(xs)
 
    if (address != NULL)
       A ^= *address;
+   add(system, &A, 0);
 }
 
 /* 
@@ -670,6 +678,7 @@ F8_OP(ns)
 
    if (address != NULL)
       A &= *address;
+   add(system, &A, 0);
 }
 
 /*
@@ -768,10 +777,11 @@ u8 pressf_init(channelf_t *system)
 void pressf_step(channelf_t *system)
 {
    u8 op = current_op(system);
-
-   printf("========\n");
+   
    if (operations[op] != NULL)
    {
+#ifdef LOGGING
+      printf("========\n");
       printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
       printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
       printf("PORT:");
@@ -786,6 +796,7 @@ void pressf_step(channelf_t *system)
             printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
          printf("|\n");
       }
+#endif
 
       operations[op](system);
       PC0++;

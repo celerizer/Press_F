@@ -99,9 +99,7 @@ void retro_reset(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   load_cartridge(&retro_channelf, info->data, info->size);
-   
-   return true;
+   return load_cartridge(&retro_channelf, info->data, info->size);
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num_info)
@@ -114,9 +112,24 @@ void retro_unload_game()
    
 }
 
+static u8 prev_input;
+
 void retro_run(void)
 {
+   /* TODO: Remove */
+   input_poll_cb();
+#ifdef LOGGING
+   if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) && !prev_input)
+   {
+      pressf_step(&retro_channelf);
+      prev_input = 1;
+   }
+   else
+      prev_input = 0;
+#else
    pressf_step(&retro_channelf);
+#endif
+
    draw_frame_rgb565(retro_channelf.vram, screen_buffer);
    video_cb(screen_buffer, 128, 64, 128 * 2);
 }
@@ -169,17 +182,49 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, NULL },
    };
    static const struct retro_controller_description port[] = {
-      { "Retro Joypad", RETRO_DEVICE_JOYPAD },
+      { "Hand-Controller", RETRO_DEVICE_JOYPAD },
       { 0 },
    };
    static const struct retro_controller_info ports[] = {
       { port, 2 },
       { NULL, 0 },
    };
+   struct retro_input_descriptor desc[] = {
+      /* Console buttons */
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "TIME (1)" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "MODE (2)" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "HOLD (3)" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "START (4)" },
+
+      /* Left controller */
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "Right" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,   "Left" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,   "Backward" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,     "Forward" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Rotate Left" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "Rotate Right" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "Pull Up" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Plunge Down" },
+
+      /* Right controller */
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "Right" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,   "Left" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,   "Backward" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,     "Forward" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Rotate Left" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "Rotate Right" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "Pull Up" },
+      { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Plunge Down" },
+
+      { 0 },
+   };
+   bool support_no_game = true;
    
    environ_cb = cb;
-   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
-   cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
+   cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
+   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO,   (void*)ports);
+   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,   &support_no_game);
+   cb(RETRO_ENVIRONMENT_SET_VARIABLES,         (void*)vars);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)

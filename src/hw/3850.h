@@ -5,7 +5,7 @@
 
 #define SCRATCH_SIZE 0x40
 
-#define STATUS_POSITIVE   (1 << 0)
+#define STATUS_SIGN       (1 << 0)
 #define STATUS_CARRY      (1 << 1)
 #define STATUS_ZERO       (1 << 2)
 #define STATUS_OVERFLOW   (1 << 3)
