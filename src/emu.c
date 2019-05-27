@@ -599,10 +599,30 @@ F8_OP(ins)
 
 void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
 {
-   u16 pixel = x * y;
-   u8  index = pixel & 3;
+   u8 byte = (x + y * 128)/4;
+   u8 final;
+   u8 mask;
 
-   system->vram[pixel/4] |= ((value & 3) << ((3 - index) * 2)); 
+   value &= 3;
+   switch ((x + y * 128) & 3)
+   {
+   case 0:
+      mask = 0xC0;
+      break;
+   case 1:
+      mask = 0x30;
+      break;
+   case 2:
+      mask = 0x0C;
+      break;
+   case 3:
+      mask = 0x03;
+      break;
+   }
+   final = (value + (value << 2) + (value << 4) + (value << 6)) & mask;
+
+   system->vram[byte] &= mask ^ 0xFF;
+   system->vram[byte] |= final;
 }
 
 /* 
@@ -610,21 +630,22 @@ void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
    OUTS (OUTput to port (Short)) 
    Set the value of a four-bit port number to the accumulator
 */
-unsigned char reverse(unsigned char b) {
-   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
-}
-
 F8_OP(outs)
 {
    u8 port = current_op(system) & 0x0F;
 
    system->io[port] = A;
    /* Hack for testing, remove this */
-   if (port == 0 && A == 0x50)
-      vram_write(system, reverse(system->io[4] ^ 0xFF) >> 1, reverse(system->io[5] ^ 0xFF) >> 2, (system->io[1] & 0xC0) >> 6);
+   if (port == 0 && (A == 0x50 || A == 0x40))
+   {
+      u8 x, y;
+
+      x = (system->io[4] ^ 0xFF) & 0x7F;
+      y = (system->io[5] ^ 0xFF) & 0x3F;
+
+      vram_write(system, x, y, (system->io[1] & 0xC0) >> 6);
+      printf("Draw pixel %u %u\n", x, y);
+   }
 }
 
 /*
@@ -780,7 +801,7 @@ void pressf_step(channelf_t *system)
    
    if (operations[op] != NULL)
    {
-#ifdef LOGGING
+#ifdef TRUE
       printf("========\n");
       printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
       printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);

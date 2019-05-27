@@ -14,7 +14,7 @@ void draw_frame_argb8888(u8 *vram, u32 *buffer)
 
 u16 get_pixel_rgb565(u8 byte, u8 index)
 {
-   switch ((byte >> index * 2) & 3)
+   switch ((byte >> (3 - index) * 2) & 3)
    {
    case 0:
       return BKG_BLACK;
