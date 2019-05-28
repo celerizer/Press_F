@@ -3,10 +3,13 @@
 
 #include "screen.h"
 
-#define BKG_BLACK 0x0000
-#define BKG_GREY  0xDEDB
-#define BKG_BLUE  0x841F
-#define BKG_GREEN 0x67EC
+const u16 PIXEL_COLOR_RGB565[4] = 
+{
+   0x066B,
+   0xF98A,
+   0x49FE,
+   0xCE9F
+};
 
 void draw_frame_argb8888(u8 *vram, u32 *buffer)
 {
@@ -14,19 +17,7 @@ void draw_frame_argb8888(u8 *vram, u32 *buffer)
 
 u16 get_pixel_rgb565(u8 byte, u8 index)
 {
-   switch ((byte >> (3 - index) * 2) & 3)
-   {
-   case 0:
-      return BKG_BLACK;
-   case 1:
-      return BKG_GREY;
-   case 2:
-      return BKG_BLUE;
-   case 3:
-      return BKG_GREEN;
-   }
-
-   return BKG_BLACK;
+   return PIXEL_COLOR_RGB565[(byte >> (3 - index) * 2) & 3];
 }
 
 void draw_frame_rgb565(u8 *vram, u16 *buffer)

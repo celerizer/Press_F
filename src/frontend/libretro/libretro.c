@@ -81,16 +81,6 @@ void retro_init(void)
       load_system_file("sl31253.rom", &retro_channelf.rom[0x0000], 0x400);
       load_system_file("sl31254.rom", &retro_channelf.rom[0x0400], 0x400);
    }
-  
-   struct retro_input_descriptor desc[] = {
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Left" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Up" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Down" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
-
-      { 0 },
-   };
-   environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
 }
 
 void retro_reset(void)
@@ -99,7 +89,10 @@ void retro_reset(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   return load_cartridge(&retro_channelf, info->data, info->size);
+   if (info && !string_is_empty(info->path))
+      return load_cartridge(&retro_channelf, info->data, info->size);
+   else
+      return true;
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num_info)
@@ -112,24 +105,48 @@ void retro_unload_game()
    
 }
 
-static u8 prev_input;
+void handle_input(void)
+{
+   u8 console, left_pad, right_pad;
+
+   input_poll_cb();
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L))
+      console |= (1 << 0);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT))
+      console |= (1 << 1);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R))
+      console |= (1 << 2);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START))
+      console |= (1 << 3);
+   retro_channelf.io[0] &= 0xF0;
+   retro_channelf.io[0] |= console;
+
+   /* Bit 6 must be on for controller input to be accepted 
+   if (!(retro_channelf.io[0] & 0x40))
+      return;
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
+      left_pad |= (1 << 0);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
+      left_pad |= (1 << 1);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
+      left_pad |= (1 << 2);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
+      left_pad |= (1 << 3);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y))
+      left_pad |= (1 << 4);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A))
+      left_pad |= (1 << 5);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B))
+      left_pad |= (1 << 6);
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X))
+      left_pad |= (1 << 7);
+   retro_channelf.io[4] |= left_pad; */
+}
 
 void retro_run(void)
 {
-   /* TODO: Remove */
-   input_poll_cb();
-#ifdef LOGGING
-   if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) && !prev_input)
-   {
-      pressf_step(&retro_channelf);
-      prev_input = 1;
-   }
-   else
-      prev_input = 0;
-#else
-   pressf_step(&retro_channelf);
-#endif
-
+   handle_input();
+   pressf_run(&retro_channelf);
    draw_frame_rgb565(retro_channelf.vram, screen_buffer);
    video_cb(screen_buffer, 128, 64, 128 * 2);
 }
@@ -187,6 +204,7 @@ void retro_set_environment(retro_environment_t cb)
    };
    static const struct retro_controller_info ports[] = {
       { port, 2 },
+      { port, 2 },
       { NULL, 0 },
    };
    struct retro_input_descriptor desc[] = {
@@ -218,11 +236,13 @@ void retro_set_environment(retro_environment_t cb)
 
       { 0 },
    };
+   enum retro_pixel_format rgb565 = RETRO_PIXEL_FORMAT_RGB565;
    bool support_no_game = true;
    
    environ_cb = cb;
    cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO,   (void*)ports);
+   cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT,      &rgb565);
    cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME,   &support_no_game);
    cb(RETRO_ENVIRONMENT_SET_VARIABLES,         (void*)vars);
 }
@@ -254,23 +274,91 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
 
 size_t retro_serialize_size(void)
 {
-   return 0;
+   /* We want to use everything except the ROM data */
+   return sizeof(channelf_t) - (ROM_CART_SIZE + ROM_BIOS_SIZE * 2);
+}
+
+/* Store savestates as big-endian and byteswap on LE platforms */
+void serialize_add_value(void **dest, const void *src, u8 size)
+{
+#ifdef MSB_FIRST
+   memcpy(*dest, src, size);
+   *dest += size;
+#else
+   u8 i, j;
+
+   for (i = size; i != 0; --i)
+   {
+      *((u8*)*dest) = ((u8*)src)[i];
+      *dest += 1;
+   }
+#endif
+}
+
+void unserialize_add_value(void *dest, const void **src, u8 size)
+{
+#ifdef MSB_FIRST
+   memcpy(*dest, src, size);
+   *src += size;
+#else
+   u8 i, j;
+
+   for (i = size; i != 0; --i)
+   {
+      ((u8*)dest)[i] = *((u8*)*src);
+      *src += 1;
+   }
+#endif
+}
+
+void serialize_add_bytes(void **dest, const void *src, u32 size)
+{
+   memcpy(*dest, src, size);
+   *dest += size;
+}
+
+void unserialize_add_bytes(void *dest, const void **src, u32 size)
+{
+   memcpy(dest, *src, size);
+   *src += size;
 }
 
 bool retro_serialize(void *data, size_t size)
 {
-   return false;
+   void** i = &data;
+
+   serialize_add_value(i, &retro_channelf.dc0,   2);
+   serialize_add_value(i, &retro_channelf.dc1,   2);
+   serialize_add_value(i, &retro_channelf.pc0,   2);
+   serialize_add_value(i, &retro_channelf.pc1,   2);
+   serialize_add_bytes(i, &retro_channelf.c3850, sizeof(c3850_t));
+   serialize_add_bytes(i, &retro_channelf.io,    IO_PORTS);
+   serialize_add_bytes(i, &retro_channelf.vram,  VRAM_SIZE);
+
+   return true;
 }
 
 bool retro_unserialize(const void *data, size_t size)
 {
-   return false;
+   const void** i = &data;
+
+   unserialize_add_value(&retro_channelf.dc0,   i, 2);
+   unserialize_add_value(&retro_channelf.dc1,   i, 2);
+   unserialize_add_value(&retro_channelf.pc0,   i, 2);
+   unserialize_add_value(&retro_channelf.pc1,   i, 2);
+   unserialize_add_bytes(&retro_channelf.c3850, i, sizeof(c3850_t));
+   unserialize_add_bytes(&retro_channelf.io,    i, IO_PORTS);
+   unserialize_add_bytes(&retro_channelf.vram,  i, VRAM_SIZE);
+
+   return true;
 }
 
 void *retro_get_memory_data(unsigned type)
 {
    if (type == RETRO_MEMORY_SYSTEM_RAM)
       return &retro_channelf.c3850.scratchpad;
+   else if (type == RETRO_MEMORY_VIDEO_RAM)
+      return &retro_channelf.vram;
    else
       return NULL;
 }
@@ -279,6 +367,8 @@ size_t retro_get_memory_size(unsigned type)
 {
    if (type == RETRO_MEMORY_SYSTEM_RAM)
       return 64;
+   else if (type == RETRO_MEMORY_VIDEO_RAM)
+      return VRAM_SIZE;
    else
       return 0;
 }

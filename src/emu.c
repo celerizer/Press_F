@@ -39,7 +39,7 @@ u16 read_16(void *src)
    u16 value;
 
 #ifndef BIG_ENDIAN
-   value = (((u8*)src)[0] << 8) + ((u8*)src)[1];
+   value = ((u8*)src)[0] + ((u8*)src)[1] * 0x100;
 #else
    memcpy(&value, src, 2);
 #endif
@@ -51,7 +51,7 @@ void write_16(void *dest, u16 src)
 {
 #ifndef BIG_ENDIAN
    ((u8*)dest)[0] = src >> 8;
-   ((u8*)dest)[1] = src & 0xFF;
+   ((u8*)dest)[1] = src;
 #else
    memcpy(dest, &src, 2);
 #endif
@@ -70,13 +70,13 @@ void set_status(channelf_t *system, const u8 flag, u8 enable)
 void add(channelf_t *system, u8 *dest, u8 src)
 {
    /* TODO: Make this less awful */
-   u8 previous = *dest;
+   u8 prev = (*dest >> 7) ? TRUE : FALSE;
 
    *dest += src;
-   set_status(system, STATUS_OVERFLOW, (*dest >> 7) != (previous >> 7) ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,     *dest == 0      ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    *dest < src     ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN, !(*dest & 0x80) ? TRUE : FALSE);
+   set_status(system, STATUS_OVERFLOW, (*dest >> 7) != prev ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,     *dest == 0           ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    *dest < src          ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE);
 }
 
 u8 current_op(channelf_t *system)
@@ -194,6 +194,7 @@ F8_OP(lr_pc1_k)
 /* 0A */
 F8_OP(lr_a_isar)
 {
+   ISAR &= 0x3F;
    lr(&A, &ISAR);
 }
 
@@ -201,6 +202,7 @@ F8_OP(lr_a_isar)
 F8_OP(lr_isar_a)
 {
    lr(&ISAR, &A);
+   ISAR &= 0x3F;
 }
 
 /* 0C */
@@ -299,11 +301,7 @@ F8_OP(com)
 /* 19 */
 F8_OP(lnk)
 {
-   set_status(system, STATUS_OVERFLOW, 0x100 - A > STATUS_CARRY ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    0x100 - A > STATUS_CARRY ? TRUE : FALSE);
-   A += get_status(system, STATUS_CARRY) ? STATUS_CARRY : 0;
-   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,     !(A & 0x80) ? TRUE : FALSE);
+   add(system, &A, get_status(system, STATUS_CARRY) ? 1 : 0);
 }
 
 /* 1A */
@@ -319,10 +317,9 @@ F8_OP(ei)
 }
 
 /* 1C */
-/* A destroyed? */
 F8_OP(pop)
 {
-   PC0 = PC1-1;//hack
+   PC0 = PC1;
 }
 
 /* 1D */
@@ -391,10 +388,7 @@ F8_OP(ci)
 {
    u8 immediate = get_immediate(system);
 
-   set_status(system, STATUS_OVERFLOW, A > immediate          ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,  A == immediate            ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY, A < immediate             ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,  !((immediate - A) & 0x80) ? TRUE : FALSE);
+   add(system, &immediate, ~A + 1);
 }
 
 /* 
@@ -426,7 +420,7 @@ F8_OP(out)
 F8_OP(pi)
 {
    A = get_immediate(system);
-   PC1 = PC0 + 2;//hack
+   PC1 = PC0 + 1;//hack
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
    PC0--; //hack
@@ -493,7 +487,7 @@ F8_OP(lr_r_a)
 /* 60 - 67 */
 F8_OP(lisu)
 {
-   u8 immediate = (current_op(system) & 0x07) << 3;
+   u8 immediate = ((current_op(system) & 0x07) << 3) & 0x38;
 
    /* Mask to lower 3 bits, load new upper */
    ISAR &= 0x07;
@@ -526,27 +520,29 @@ F8_OP(lis)
 F8_OP(bt_n)
 {
    if ((current_op(system) & 0x07) & W)
-      PC0 += (i8)get_immediate(system);
+      PC0 += (i8)next_op(system);
+   else
+      PC0++;
 }
 
 /* 88 */
 F8_OP(am)
 {
-   add(system, &A, DC0);
+   add(system, &A, get_rom(system, DC0));
    DC0++;
 }
 
 /* 89 */
 F8_OP(amd)
 {
-   add(system, &A, bcd(DC0));
+   add(system, &A, bcd(get_rom(system, DC0)));
    DC0++;
 }
 
 /* 8A */
 F8_OP(nm)
 {
-   A &= DC0;
+   A &= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
 }
@@ -554,7 +550,7 @@ F8_OP(nm)
 /* 8B */
 F8_OP(om)
 {
-   A |= DC0;
+   A |= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
 }
@@ -562,17 +558,33 @@ F8_OP(om)
 /* 8C */
 F8_OP(xm)
 {
-   A ^= DC0;
+   A ^= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
 }
 
 /* 8D */
+F8_OP(cm)
+{
+   u8 temp = get_rom(system, DC0);
+
+   add(system, &temp, ~A + 1);
+   DC0++;
+}
 
 /* 8E */
 F8_OP(adc)
 {
-   DC0 += A;
+   DC0 += (i8)A;
+}
+
+/* 8F */
+F8_OP(br7)
+{
+   if ((ISAR & 7) != 7)
+      PC0 += (i8)next_op(system);
+   else
+      PC0++;
 }
 
 /* 90 - 9F */
@@ -599,7 +611,7 @@ F8_OP(ins)
 
 void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
 {
-   u8 byte = (x + y * 128)/4;
+   u16 byte = (x + y * 128)/4;
    u8 final;
    u8 mask;
 
@@ -644,7 +656,9 @@ F8_OP(outs)
       y = (system->io[5] ^ 0xFF) & 0x3F;
 
       vram_write(system, x, y, (system->io[1] & 0xC0) >> 6);
+#ifdef LOGGING
       printf("Draw pixel %u %u\n", x, y);
+#endif
    }
 }
 
@@ -684,8 +698,10 @@ F8_OP(xs)
    u8 *address = isar(system);
 
    if (address != NULL)
+   {
       A ^= *address;
-   add(system, &A, 0);
+      add(system, &A, 0);
+   }
 }
 
 /* 
@@ -698,8 +714,10 @@ F8_OP(ns)
    u8 *address = isar(system);
 
    if (address != NULL)
+   {
       A &= *address;
-   add(system, &A, 0);
+      add(system, &A, 0);
+   }
 }
 
 /*
@@ -790,7 +808,12 @@ u8 pressf_init(channelf_t *system)
    operations[0x70] = clr;
    operations[0x88] = am;
    operations[0x89] = amd;
+   operations[0x8A] = nm;
+   operations[0x8B] = om;
+   operations[0x8C] = xm;
+   operations[0x8D] = cm;
    operations[0x8E] = adc;
+   operations[0x8F] = br7;
 
    return TRUE;
 }
@@ -801,7 +824,7 @@ void pressf_step(channelf_t *system)
    
    if (operations[op] != NULL)
    {
-#ifdef TRUE
+#ifdef LOGGING
       printf("========\n");
       printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
       printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
@@ -835,7 +858,7 @@ u8 pressf_run(channelf_t *system)
       return FALSE;
    else
    {
-      instruction_count = 100000;
+      instruction_count = 20000;
       do
       {
          pressf_step(system);
@@ -843,7 +866,6 @@ u8 pressf_run(channelf_t *system)
       } while (instruction_count > 0);
    }
 
-   exit(0); //remove
    return TRUE;
 }
 
