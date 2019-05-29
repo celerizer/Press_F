@@ -155,9 +155,9 @@ void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
    info->library_name     = "Press F";
-   info->library_version  = "0.0";
+   info->library_version  = GIT_VERSION;
    info->need_fullpath    = false;
-   info->valid_extensions = "bin";
+   info->valid_extensions = "chf|bin";
    info->block_extract    = false;
 }
 
