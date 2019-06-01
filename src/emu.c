@@ -29,32 +29,47 @@
 static void (*operations[256])(channelf_t *system);
 static unsigned long instruction_count;
 
-u8 bcd(u8 value)
+void print_machine(channelf_t *system)
 {
-   return (((value >> 4) & 0x0F) * 10) + (value & 0x0F);
+   u8 op = system->rom[PC0];
+   printf("========\n");
+   printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
+   printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
+   printf("PORT:");
+   for (u8 i = 0; i < 16; i++)
+      printf(" %02X", system->io[i]);
+   printf("\nOperation: %02X\n", op);
+   printf("--------\n");
+   for (u8 i = 0; i < 4; i++)
+   {
+      printf("| RAM [%02X]: ", i * 0x10);
+      for (u8 j = 0; j < 16; j++)
+         printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
+      printf("|\n");
+   }
 }
 
 u16 read_16(void *src)
 {
    u16 value;
 
-#ifndef BIG_ENDIAN
-   value = ((u8*)src)[0] + ((u8*)src)[1] * 0x100;
-#else
-   memcpy(&value, src, 2);
-#endif
+//#ifndef BIG_ENDIAN
+   value = ((u8*)src)[0] * 0x100 + ((u8*)src)[1];
+//#else
+//   memcpy(&value, src, 2);
+//#endif
 
    return value;
 }
 
 void write_16(void *dest, u16 src)
 {
-#ifndef BIG_ENDIAN
-   ((u8*)dest)[0] = src >> 8;
-   ((u8*)dest)[1] = src;
-#else
-   memcpy(dest, &src, 2);
-#endif
+//#ifndef BIG_ENDIAN
+   ((u8*)dest)[0] = ((src & 0xFF00) >> 8) & 0xFF;
+   ((u8*)dest)[1] = src & 0xFF;
+//#else
+//   memcpy(dest, &src, 2);
+//#endif
 }
 
 u8 get_status(channelf_t *system, const u8 flag)
@@ -73,10 +88,34 @@ void add(channelf_t *system, u8 *dest, u8 src)
    u8 prev = (*dest >> 7) ? TRUE : FALSE;
 
    *dest += src;
-   set_status(system, STATUS_OVERFLOW, (*dest >> 7) != prev ? TRUE : FALSE);
+   set_status(system, STATUS_OVERFLOW, (!prev && *dest >> 7) ? TRUE : FALSE);
    set_status(system, STATUS_ZERO,     *dest == 0           ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    *dest < src          ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE); 
+}
+
+void add_bcd(channelf_t *system, u8 *augend, u8 addend)
+{
+   u8 tmp = *augend + addend;
+
+   u8 c = 0; // high order carry
+   u8 ic = 0; // low order carry
+
+   if (((*augend + addend) & 0xff0) > 0xf0)
+      c = 1;
+   if ((*augend & 0x0f) + (addend & 0x0f) > 0x0F)
+      ic = 1;
+
+   add(system, augend, addend);
+
+   if (c == 0 && ic == 0)
+      tmp = ((tmp + 0xa0) & 0xf0) + ((tmp + 0x0a) & 0x0f);
+   if (c == 0 && ic == 1)
+      tmp = ((tmp + 0xa0) & 0xf0) + (tmp & 0x0f);
+   if (c == 1 && ic == 0)
+      tmp = (tmp & 0xf0) + ((tmp + 0x0a) & 0x0f);
+
+   *augend = tmp;
 }
 
 u8 current_op(channelf_t *system)
@@ -105,17 +144,19 @@ u8* isar(channelf_t *system)
 
    /* Last 4 bits only */
    opcode &= 0x0F;
-   if (opcode <= 0x0B)
+   if (opcode < 0x0C)
    {
       /* Address scratchpad directly for first 12 bytes */
       address = &system->c3850.scratchpad[opcode];
    }
    else if (opcode != 0x0F)
       address = &system->c3850.scratchpad[ISAR];
+
    if (opcode == 0x0D)
-      ISAR++;
+      ISAR = (ISAR & 0x38) | ((ISAR + 1) & 0x07);
+   /* TODO: Gross! */
    else if (opcode == 0x0E)
-      ISAR--;
+      ISAR = (ISAR & 0x38) | ((ISAR - 1) & 0x07);
 
    return address;
 }
@@ -194,7 +235,6 @@ F8_OP(lr_pc1_k)
 /* 0A */
 F8_OP(lr_a_isar)
 {
-   ISAR &= 0x3F;
    lr(&A, &ISAR);
 }
 
@@ -209,14 +249,14 @@ F8_OP(lr_isar_a)
 /* PK: Loads process counter into backup, K into process counter */
 F8_OP(pk)
 {
-   PC1 = PC0;
-   PC0 = read_16(&KU);
+   PC1 = PC0 + 1;
+   PC0 = read_16(&KU) - 1;
 }
 
 /* 0D */
 F8_OP(lr_pc0_q)
 {
-   PC0 = read_16(&QU);
+   PC0 = read_16(&QU) - 1;
 }
 
 /* 0E */
@@ -319,7 +359,7 @@ F8_OP(ei)
 /* 1C */
 F8_OP(pop)
 {
-   PC0 = PC1;
+   PC0 = PC1 - 1;
 }
 
 /* 1D */
@@ -420,7 +460,7 @@ F8_OP(out)
 F8_OP(pi)
 {
    A = get_immediate(system);
-   PC1 = PC0 + 1;//hack
+   PC1 = PC0 + 2;//hack
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
    PC0--; //hack
@@ -535,7 +575,7 @@ F8_OP(am)
 /* 89 */
 F8_OP(amd)
 {
-   add(system, &A, bcd(get_rom(system, DC0)));
+   add_bcd(system, &A, get_rom(system, DC0));
    DC0++;
 }
 
@@ -685,7 +725,7 @@ F8_OP(asd)
    u8 *address = isar(system);
 
    if (address != NULL)
-      add(system, &A, bcd(*address));
+      add_bcd(system, &A, *address);
 }
 
 /* 
@@ -825,21 +865,7 @@ void pressf_step(channelf_t *system)
    if (operations[op] != NULL)
    {
 #ifdef LOGGING
-      printf("========\n");
-      printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
-      printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
-      printf("PORT:");
-      for (u8 i = 0; i < 16; i++)
-         printf(" %02X", system->io[i]);
-      printf("\nOperation: %02X\n", op);
-      printf("--------\n");
-      for (u8 i = 0; i < 4; i++)
-      {
-         printf("| RAM [%02X]: ", i * 0x10);
-         for (u8 j = 0; j < 16; j++)
-            printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
-         printf("|\n");
-      }
+      print_machine(system);
 #endif
 
       operations[op](system);
