@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "emu.h"
+#include "input.h"
 
 #define A    system->c3850.accumulator
 #define ISAR system->c3850.isar
@@ -644,6 +645,11 @@ F8_OP(bf)
 F8_OP(ins)
 {
    u8 port = current_op(system) & 0x0F;
+
+   if (port == 1)
+      system->io[1] = get_input(0);
+   else if (port == 4)
+      system->io[4] = get_input(1);
 
    A = system->io[port];
    add(system, &A, 0);
