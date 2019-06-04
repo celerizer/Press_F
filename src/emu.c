@@ -646,10 +646,12 @@ F8_OP(ins)
 {
    u8 port = current_op(system) & 0x0F;
 
-   if (port == 1)
-      system->io[1] = get_input(0);
+   if (port == 0)
+      system->io[0] = get_input(0);
+   else if (port == 1)
+      system->io[1] = get_input(1);
    else if (port == 4)
-      system->io[4] = get_input(1);
+      system->io[4] = get_input(4);
 
    A = system->io[port];
    add(system, &A, 0);
@@ -691,10 +693,11 @@ void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
 F8_OP(outs)
 {
    u8 port = current_op(system) & 0x0F;
+   u8 temp = system->io[0];
 
    system->io[port] = A;
    /* Hack for testing, remove this */
-   if (port == 0 && (A == 0x50 || A == 0x40))
+   if (port == 0 && (temp == 0x60) && (A == 0x40 || A == 0x50))
    {
       u8 x, y;
 
@@ -702,9 +705,6 @@ F8_OP(outs)
       y = (system->io[5] ^ 0xFF) & 0x3F;
 
       vram_write(system, x, y, (system->io[1] & 0xC0) >> 6);
-#ifdef LOGGING
-      printf("Draw pixel %u %u\n", x, y);
-#endif
    }
 }
 
