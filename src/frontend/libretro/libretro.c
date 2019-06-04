@@ -86,6 +86,7 @@ void retro_init(void)
 
 void retro_reset(void)
 {
+   pressf_reset(&retro_channelf);
 }
 
 bool retro_load_game(const struct retro_game_info *info)

@@ -901,4 +901,13 @@ u8 pressf_run(channelf_t *system)
    return TRUE;
 }
 
+void pressf_reset(channelf_t *system)
+{
+   if (system)
+   {
+      PC0 = 0;
+      PC1 = 0;
+   }
+}
+
 #endif
