@@ -7,6 +7,7 @@
 
 #include "emu.h"
 #include "input.h"
+#include "screen.h"
 
 #define A    system->c3850.accumulator
 #define ISAR system->c3850.isar
@@ -657,34 +658,6 @@ F8_OP(ins)
    add(system, &A, 0);
 }
 
-void vram_write(channelf_t *system, u8 x, u8 y, u8 value)
-{
-   u16 byte = (x + y * 128)/4;
-   u8 final;
-   u8 mask;
-
-   value &= 3;
-   switch ((x + y * 128) & 3)
-   {
-   case 0:
-      mask = 0xC0;
-      break;
-   case 1:
-      mask = 0x30;
-      break;
-   case 2:
-      mask = 0x0C;
-      break;
-   case 3:
-      mask = 0x03;
-      break;
-   }
-   final = (value + (value << 2) + (value << 4) + (value << 6)) & mask;
-
-   system->vram[byte] &= mask ^ 0xFF;
-   system->vram[byte] |= final;
-}
-
 /* 
    B0 - BF
    OUTS (OUTput to port (Short)) 
@@ -704,7 +677,7 @@ F8_OP(outs)
       x = (system->io[4] ^ 0xFF) & 0x7F;
       y = (system->io[5] ^ 0xFF) & 0x3F;
 
-      vram_write(system, x, y, (system->io[1] & 0xC0) >> 6);
+      vram_write(system->vram, x, y, (system->io[1] & 0xC0) >> 6);
    }
 }
 
