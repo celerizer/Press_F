@@ -141,8 +141,7 @@ void retro_run(void)
    pressf_run(&retro_channelf);
 
    sound_write();
-   audio_batch_cb(samples, samples_this_frame);
-   sound_empty();
+   audio_batch_cb(samples, PF_SAMPLES);
 
    draw_frame_rgb565(retro_channelf.vram, screen_buffer);
    video_cb(screen_buffer, 128, 64, 128 * 2);

@@ -1,18 +1,10 @@
 #ifndef PRESS_F_SOUND_C
 #define PRESS_F_SOUND_C
 
-#include <math.h>
 #include <string.h>
-#include <stdio.h>
-
-#define PF_AMPLITUDE 3000.0
-#define PF_FREQUENCY 44100
-#define PF_FPS       60
-#define PF_SAMPLES   PF_FREQUENCY / PF_FPS
-#define PF_PERIOD    1.0 / PF_FREQUENCY
-#define PF_PI        3.14159265358979323846264338327950288
 
 #include "sound.h"
+#include "wave.h"
 
 const i16 SOUND_FREQUENCIES[4] = 
 {
@@ -22,52 +14,46 @@ const i16 SOUND_FREQUENCIES[4] =
    120
 };
 
-static i16 frequency_last;
-static u8  frequency_pushes;
-static u32 frequency_this_tick;
-static u16 last_tick;
+static i16   frequency_last;
+static u8    frequency_pushes;
+static u32   frequency_this_tick;
+static u16   last_tick;
+static float amplitude;
+static u32   time;
+static i16 frequencies[PF_SAMPLES];
 
-static i16 frequencies[735];
-i16 samples[1470];
+i16 samples[PF_SAMPLES * 2];
 u32 samples_this_frame;
-
-static u32 test;
 
 void sound_empty()
 {
-   //memset(samples, 0, sizeof(samples));
-   //memset(frequencies, 0, sizeof(frequencies));
-   frequency_pushes = 0;
-   frequency_this_tick = 0;
-   last_tick = 0;
+   memset(samples,     0, sizeof(samples));
+   memset(frequencies, 0, sizeof(frequencies));
 }
 
 void sound_write()
 {
    u16 i;
 
-   samples_this_frame = PF_SAMPLES;
-
    if (last_tick != PF_SAMPLES - 1)
    {
       for (i = last_tick; i < PF_SAMPLES; i++)
          frequencies[i] = frequency_last;
    }
-
-   for (i = 0; i < samples_this_frame; i++, test++)
+   for (i = 0; i < PF_SAMPLES; i++, time++)
    {
-      /* Basic
-      samples[2 * i]     = frequencies[i];
-      samples[2 * i + 1] = frequencies[i]; */
-
-      /* Sine */
-      samples[2 * i]     = PF_AMPLITUDE * cos(2 * PF_PI * frequencies[i] * test * PF_PERIOD);
-      samples[2 * i + 1] = PF_AMPLITUDE * cos(2 * PF_PI * frequencies[i] * test * PF_PERIOD);
-
-      /* Sawtooth
-      samples[2 * i]     = ((-2.0 * PF_AMPLITUDE)/PRESS_F_PI) * frequencies[i] * atan(1.0 / tan((test * PRESS_F_PI) / PF_PERIOD));
-      samples[2 * i + 1] = ((-2.0 * PF_AMPLITUDE)/PRESS_F_PI) * frequencies[i] * atan(1.0 / tan((test * PRESS_F_PI) / PF_PERIOD)); */
+      amplitude *= PF_DECAY;
+      samples[2 * i]     = amplitude * pf_sine(2 * PF_PI * frequencies[i] * time * PF_PERIOD);
+      samples[2 * i + 1] = amplitude * pf_sine(2 * PF_PI * frequencies[i] * time * PF_PERIOD);
+      if (frequencies[i] == 0)
+      {
+         time = 0;
+         amplitude = PF_MAX_AMPLITUDE;
+      }
    }
+   frequency_pushes = 0;
+   frequency_this_tick = 0;
+   last_tick = 0;
 }
 
 void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
@@ -85,7 +71,7 @@ void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
    {
       u16 i;
 
-      frequency_this_tick = ((float)frequency_this_tick / frequency_pushes);
+      frequency_this_tick = ((float)frequency_this_tick / (float)frequency_pushes);
       for (i = last_tick; i <= current_tick; i++)
          frequencies[i] = frequency_this_tick;
       frequency_this_tick = 0;
