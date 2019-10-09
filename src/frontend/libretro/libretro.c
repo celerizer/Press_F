@@ -13,6 +13,12 @@ static channelf_t retro_channelf;
 static u16  screen_buffer[128 * 64];
 static char system_dir   [1024];
 
+/* libretro video options */
+static u8   (*lr_video_draw)(u8 *vram, u16 *buffer);
+static u16    lr_video_width;
+static u16    lr_video_height;
+static float  lr_video_aspect;
+
 /* libretro callbacks */
 static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
@@ -62,12 +68,35 @@ bool load_system_file(char *filename, u8 *rom_data, u16 rom_size)
   return true;
 }
 
+void set_variables()
+{
+   struct retro_variable var = {0};
+
+   var.key = "press_f_screen_size";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && (strcmp(var.value, "extended") == 0))
+   {
+      lr_video_draw   = draw_frame_rgb565_full;
+      lr_video_height = VRAM_HEIGHT;
+      lr_video_width  = VRAM_WIDTH;
+      lr_video_aspect = VRAM_WIDTH / VRAM_HEIGHT;
+   }
+   else
+   {
+      lr_video_draw   = draw_frame_rgb565;
+      lr_video_height = SCREEN_HEIGHT;
+      lr_video_width  = SCREEN_WIDTH;
+      lr_video_aspect = (float)SCREEN_WIDTH / SCREEN_HEIGHT;
+   }
+}
+
 /* libretro API */
 
 void retro_init(void)
 {
    char *dir = NULL;
 
+   set_variables();
    pressf_init(&retro_channelf);
    
    if (!environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log_cb))
@@ -137,14 +166,26 @@ void handle_input(void)
 
 void retro_run(void)
 {
+   /* Have the core options been changed? Re-init video if so */
+   u8 settings_changed = FALSE;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &settings_changed) && settings_changed)
+   {
+      struct retro_system_av_info info;
+
+      set_variables();
+      retro_get_system_av_info(&info);
+      environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info);
+      force_draw_frame();
+   }
+
    handle_input();
    pressf_run(&retro_channelf);
 
    sound_write();
    audio_batch_cb(samples, PF_SAMPLES);
 
-   draw_frame_rgb565(retro_channelf.vram, screen_buffer);
-   video_cb(screen_buffer, 102, 58, 102 * 2);
+   lr_video_draw(retro_channelf.vram, screen_buffer);
+   video_cb(screen_buffer, lr_video_width, lr_video_height, lr_video_width * 2);
 }
 
 void retro_get_system_info(struct retro_system_info *info)
@@ -160,11 +201,11 @@ void retro_get_system_info(struct retro_system_info *info)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->geometry.base_width   = 102;
-   info->geometry.base_height  = 58;
-   info->geometry.max_width    = 102;
-   info->geometry.max_height   = 58;
-   info->geometry.aspect_ratio = 2;
+   info->geometry.base_width   = lr_video_width;
+   info->geometry.base_height  = lr_video_height;
+   info->geometry.max_width    = lr_video_width;
+   info->geometry.max_height   = lr_video_height;
+   info->geometry.aspect_ratio = lr_video_aspect;
    info->timing.fps            = 60;
    info->timing.sample_rate    = 44100;
 }
@@ -191,11 +232,12 @@ void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = 
    {
-      { "press_f_option", "Option; enabled|disabled"},
+      { "press_f_screen_size", "Screen size; normal|extended"},
       { NULL, NULL },
    };
    static const struct retro_controller_description port[] = {
       { "Hand-Controller", RETRO_DEVICE_JOYPAD },
+      /* { "Keyboard", RETRO_DEVICE_JOYPAD }, not yet implemented */
       { 0 },
    };
    static const struct retro_controller_info ports[] = {
