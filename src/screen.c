@@ -1,6 +1,8 @@
 #ifndef PRESSF_SCREEN_C
 #define PRESSF_SCREEN_C
 
+#include <string.h>
+
 #include "screen.h"
 
 static u8 screen_dirty_any;
@@ -8,10 +10,10 @@ static u8 screen_dirty[64];
 
 const u16 PIXEL_COLOR_RGB565[4][4] = 
 {
-   {0x066B, 0xF98A, 0x49FE, 0xCE9F},
    {0x066B, 0xF98A, 0x49FE, 0xE71C},
+   {0xFFFF, 0xFFFF, 0xFFFF, 0x0000},
    {0x066B, 0xF98A, 0x49FE, 0x97F4},
-   {0xFFFF, 0xFFFF, 0xFFFF, 0x0000}
+   {0x066B, 0xF98A, 0x49FE, 0xCE9F}
 };
 
 /* Returns the two-bit pixel data for a given pixel index */
@@ -24,6 +26,11 @@ u8 get_pixel(u8 *vram, u16 index)
 u8 get_palette(u8 *vram, u16 index)
 {
    return get_pixel(vram, (index & 0xFF80) + 126);
+}
+
+void force_draw_frame()
+{
+   memset(screen_dirty, TRUE, sizeof(screen_dirty));
 }
 
 void draw_frame_rgb565(u8 *vram, u16 *buffer)
@@ -44,7 +51,7 @@ void draw_frame_rgb565(u8 *vram, u16 *buffer)
             continue;
          }
 
-         palette = get_palette(vram, y_pos);
+         palette = get_palette(vram, buffer_pos);
 
          for (x_pos = 0; x_pos < VRAM_WIDTH; x_pos++, buffer_pos++)
          {

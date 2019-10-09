@@ -6,8 +6,10 @@
 #include <string.h>
 
 #include "emu.h"
+#include "hle.h"
 #include "input.h"
 #include "screen.h"
+#include "sound.h"
 
 #define A    system->c3850.accumulator
 #define ISAR system->c3850.isar
@@ -646,12 +648,12 @@ F8_OP(bf)
 F8_OP(ins)
 {
    u8 port = current_op(system) & 0x0F;
-
+   
    if (port == 0)
       system->io[0] = get_input(0);
-   else if (port == 1)
+   else if (system->io[1] == 0 && port == 1)
       system->io[1] = get_input(1);
-   else if (port == 4)
+   else if (system->io[4] == 0 && port == 4)
       system->io[4] = get_input(4);
 
    A = system->io[port];
@@ -666,7 +668,7 @@ F8_OP(ins)
 F8_OP(outs)
 {
    u8 port = current_op(system) & 0x0F;
-   u8 temp = system->io[0];
+   u8 temp = system->io[port];
 
    system->io[port] = A;
    /* Hack for testing, remove this */
@@ -679,6 +681,8 @@ F8_OP(outs)
 
       vram_write(system->vram, x, y, (system->io[1] & 0xC0) >> 6);
    }
+   else if (port == 5)
+      sound_push_back(system->io[5] >> 6, system->cycles, system->total_cycles);
 }
 
 /*
@@ -750,7 +754,7 @@ F8_OP(invalid_opcode)
 
 u8 pressf_init(channelf_t *system)
 {
-   u8 i = 0;
+   u32 i = 0;
 
    /* For testing BIOS */
    for (i = 0x00; i < 0x40; i++)
@@ -834,13 +838,25 @@ u8 pressf_init(channelf_t *system)
    operations[0x8E] = adc;
    operations[0x8F] = br7;
 
+   system->functions = calloc(ROM_CART_SIZE + ROM_BIOS_SIZE * 2, sizeof(void(*)(channelf_t*)));
+   for (i = 0; i < ROM_CART_SIZE + ROM_BIOS_SIZE * 2; i++)
+   {
+      /* Set pointers to all implemented HLE functions */
+      system->functions[i] = hle_get_func_from_addr(i);
+      if (system->functions[i] == NULL)
+         system->functions[i] = operations[system->rom[i]];
+      else
+         printf("HLE function found: %04lX - %p\n", i, system->functions[i]);
+   }
+   system->total_cycles = 25000;
+
    return TRUE;
 }
 
 void pressf_step(channelf_t *system)
 {
    u8 op = current_op(system);
-   
+
    if (operations[op] != NULL)
    {
 #ifdef LOGGING
@@ -863,12 +879,12 @@ u8 pressf_run(channelf_t *system)
       return FALSE;
    else
    {
-      instruction_count = 20000;
+      system->cycles = 0;
       do
       {
          pressf_step(system);
-         instruction_count -= 10;
-      } while (instruction_count > 0);
+         system->cycles += 10;
+      } while (system->total_cycles > system->cycles);
    }
 
    return TRUE;

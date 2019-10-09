@@ -19,6 +19,7 @@
 
 typedef struct channelf_t
 {
+   void    (**functions)();
    c3850_t c3850;
 
    u16     dc0;
@@ -29,6 +30,9 @@ typedef struct channelf_t
    u8      io  [IO_PORTS];
    u8      rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];
    u8      vram[VRAM_SIZE];
+
+   u32     cycles;
+   u32     total_cycles;
 } channelf_t;
 
 #endif

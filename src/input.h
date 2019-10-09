@@ -30,4 +30,6 @@
 u8 get_input(u8 port);
 void set_input_button(u8 port, u8 button, u8 enabled);
 
+extern u8 input[16];
+
 #endif

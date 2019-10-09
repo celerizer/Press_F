@@ -3,7 +3,7 @@
 
 #include "input.h"
 
-static u8 input[16];
+u8 input[16];
 
 u8 get_input(u8 port)
 {

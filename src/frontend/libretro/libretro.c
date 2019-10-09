@@ -6,6 +6,7 @@
 #include "file.h"
 #include "input.h"
 #include "screen.h"
+#include "sound.h"
 
 static channelf_t retro_channelf;
 
@@ -109,6 +110,7 @@ void retro_unload_game()
 
 void handle_input(void)
 {
+   input_poll_cb();
    set_input_button(0, INPUT_TIME,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L));
    set_input_button(0, INPUT_MODE,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT));
    set_input_button(0, INPUT_HOLD,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R));
@@ -120,8 +122,8 @@ void handle_input(void)
    set_input_button(1, INPUT_FORWARD,    input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
    set_input_button(1, INPUT_ROTATE_CCW, input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
    set_input_button(1, INPUT_ROTATE_CW,  input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
-   set_input_button(1, INPUT_PULL,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
-   set_input_button(1, INPUT_PUSH,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(1, INPUT_PULL,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(1, INPUT_PUSH,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
 
    set_input_button(4, INPUT_RIGHT,      input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
    set_input_button(4, INPUT_LEFT,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
@@ -129,14 +131,19 @@ void handle_input(void)
    set_input_button(4, INPUT_FORWARD,    input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
    set_input_button(4, INPUT_ROTATE_CCW, input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
    set_input_button(4, INPUT_ROTATE_CW,  input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
-   set_input_button(4, INPUT_PULL,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
-   set_input_button(4, INPUT_PUSH,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(4, INPUT_PULL,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(4, INPUT_PUSH,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
 }
 
 void retro_run(void)
 {
    handle_input();
    pressf_run(&retro_channelf);
+
+   sound_write();
+   audio_batch_cb(samples, samples_this_frame);
+   sound_empty();
+
    draw_frame_rgb565(retro_channelf.vram, screen_buffer);
    video_cb(screen_buffer, 128, 64, 128 * 2);
 }
@@ -339,6 +346,7 @@ bool retro_unserialize(const void *data, size_t size)
    unserialize_add_bytes(&retro_channelf.c3850, i, sizeof(c3850_t));
    unserialize_add_bytes(&retro_channelf.io,    i, IO_PORTS);
    unserialize_add_bytes(&retro_channelf.vram,  i, VRAM_SIZE);
+   force_draw_frame();
 
    return true;
 }
