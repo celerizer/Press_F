@@ -144,7 +144,7 @@ void retro_run(void)
    audio_batch_cb(samples, PF_SAMPLES);
 
    draw_frame_rgb565(retro_channelf.vram, screen_buffer);
-   video_cb(screen_buffer, 128, 64, 128 * 2);
+   video_cb(screen_buffer, 102, 58, 102 * 2);
 }
 
 void retro_get_system_info(struct retro_system_info *info)
@@ -160,10 +160,10 @@ void retro_get_system_info(struct retro_system_info *info)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->geometry.base_width   = 128;
-   info->geometry.base_height  = 64;
-   info->geometry.max_width    = 128;
-   info->geometry.max_height   = 64;
+   info->geometry.base_width   = 102;
+   info->geometry.base_height  = 58;
+   info->geometry.max_width    = 102;
+   info->geometry.max_height   = 58;
    info->geometry.aspect_ratio = 2;
    info->timing.fps            = 60;
    info->timing.sample_rate    = 44100;

@@ -38,7 +38,7 @@ void force_draw_frame()
    memset(screen_dirty, TRUE, sizeof(screen_dirty));
 }
 
-void draw_frame_rgb565(u8 *vram, u16 *buffer)
+void draw_frame_rgb565_full(u8 *vram, u16 *buffer)
 {
    if (!screen_dirty_any)
       return;
@@ -61,6 +61,39 @@ void draw_frame_rgb565(u8 *vram, u16 *buffer)
          for (x_pos = 0; x_pos < VRAM_WIDTH; x_pos++, buffer_pos++)
          {
             pixel_data = get_pixel(vram, buffer_pos);
+            buffer[buffer_pos] = PIXEL_COLOR_RGB565[palette][pixel_data];
+         }
+
+         screen_dirty[y_pos] = FALSE;
+      }
+
+      screen_dirty_any = FALSE;
+   }
+}
+
+void draw_frame_rgb565(u8 *vram, u16 *buffer)
+{
+   if (!screen_dirty_any)
+      return;
+   else
+   {
+      u8 palette, pixel_data, x_pos, y_pos;
+      u16 buffer_pos = 0;
+
+      for (y_pos = 4; y_pos < 4 + 58; y_pos++)
+      {
+         /* Don't waste time painting lines that haven't changed this frame */
+         if (!screen_dirty[y_pos])
+         {
+            buffer_pos += 102;
+            continue;
+         }
+
+         palette = get_palette(vram, y_pos * VRAM_WIDTH + x_pos);
+
+         for (x_pos = 4; x_pos < 4 + 102; x_pos++, buffer_pos++)
+         {
+            pixel_data = get_pixel(vram, y_pos * VRAM_WIDTH + x_pos);
             buffer[buffer_pos] = PIXEL_COLOR_RGB565[palette][pixel_data];
          }
 
