@@ -35,20 +35,32 @@ void sound_write()
 {
    u16 i;
 
+   /* Fill any unwritten samples with the last known tone */
    if (last_tick != PF_SAMPLES - 1)
    {
       for (i = last_tick; i < PF_SAMPLES; i++)
          frequencies[i] = frequency_last;
    }
+
    for (i = 0; i < PF_SAMPLES; i++, time++)
    {
-      samples[2 * i]     = amplitude * pf_wave((2 * PF_PI * frequencies[i] * time * PF_PERIOD), FALSE);
-      samples[2 * i + 1] = amplitude * pf_wave((2 * PF_PI * frequencies[i] * time * PF_PERIOD), FALSE);
-      amplitude *= PF_DECAY;
       if (frequencies[i] == 0)
       {
+         /* Sound was turned off, reset the amplitude so our next sound pops */
          time = 0;
          amplitude = PF_MAX_AMPLITUDE;
+         samples[2 * i]     = 0;
+         samples[2 * i + 1] = 0;
+      }
+      else
+      {
+         /* Use sine wave to tell if our square wave is on or off */
+         float sine = pf_wave((2 * PF_PI * frequencies[i] * time * PF_PERIOD), FALSE);
+         i8 mult = sine > 0 ? 1 : 0;
+
+         samples[2 * i]     = amplitude * mult;
+         samples[2 * i + 1] = amplitude * mult;
+         amplitude *= PF_DECAY;
       }
    }
    frequency_pushes = 0;
