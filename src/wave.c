@@ -24,7 +24,7 @@ float pf_power(float x, u8 power)
    return result;
 }
 
-float pf_sine(float x)
+float pf_wave(float x, u8 cosine)
 {
    float next, result;
    u8 positive = TRUE;
@@ -32,8 +32,8 @@ float pf_sine(float x)
 
    while (x > 2 * PF_PI)
       x -= 2 * PF_PI;
-   result = x;
-   for (i = 3; i <= PF_TERMS; i += 2)
+   result = cosine ? 1 : x;
+   for (i = cosine ? 2 : 3; i <= PF_TERMS; i += 2)
    {
       positive ^= TRUE;
       next = pf_power(x, i) / pf_factorial(i);

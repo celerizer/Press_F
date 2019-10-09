@@ -43,8 +43,8 @@ void sound_write()
    for (i = 0; i < PF_SAMPLES; i++, time++)
    {
       amplitude *= PF_DECAY;
-      samples[2 * i]     = amplitude * pf_sine(2 * PF_PI * frequencies[i] * time * PF_PERIOD);
-      samples[2 * i + 1] = amplitude * pf_sine(2 * PF_PI * frequencies[i] * time * PF_PERIOD);
+      samples[2 * i]     = amplitude * pf_wave((2 * PF_PI * frequencies[i] * time * PF_PERIOD), FALSE);
+      samples[2 * i + 1] = amplitude * pf_wave((2 * PF_PI * frequencies[i] * time * PF_PERIOD), FALSE);
       if (frequencies[i] == 0)
       {
          time = 0;

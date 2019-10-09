@@ -1,10 +1,10 @@
 #ifndef PRESS_F_WAVE_H
 #define PRESS_F_WAVE_H
 
-#define PF_PI    3.14159265358979323846264338327950288
+#define PF_PI    3.141592653589793
 /* Largest Taylor series factorial a float can hold */
-#define PF_TERMS 33
+#define PF_TERMS 34
 
-float pf_sine(float x);
+float pf_wave(float x, u8 cosine);
 
 #endif
