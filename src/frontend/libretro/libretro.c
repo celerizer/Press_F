@@ -74,7 +74,7 @@ void set_variables()
 
    var.key = "press_f_screen_size";
 
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && (strcmp(var.value, "extended") == 0))
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !strcmp(var.value, "extended"))
    {
       lr_video_draw   = draw_frame_rgb565_full;
       lr_video_height = VRAM_HEIGHT;
@@ -88,6 +88,14 @@ void set_variables()
       lr_video_width  = SCREEN_WIDTH;
       lr_video_aspect = (float)SCREEN_WIDTH / SCREEN_HEIGHT;
    }
+
+   var.key = "press_f_skip_verification";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !strcmp(var.value, "enabled"))
+   {
+      retro_channelf.rom[0x0015] = 0x2B;
+      retro_channelf.rom[0x0016] = 0x2B;
+   }
 }
 
 /* libretro API */
@@ -95,9 +103,6 @@ void set_variables()
 void retro_init(void)
 {
    char *dir = NULL;
-
-   set_variables();
-   pressf_init(&retro_channelf);
    
    if (!environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log_cb))
       log_cb = NULL;
@@ -112,6 +117,9 @@ void retro_init(void)
       load_system_file("sl31253.rom", &retro_channelf.rom[0x0000], 0x400);
       load_system_file("sl31254.rom", &retro_channelf.rom[0x0400], 0x400);
    }
+
+   pressf_init(&retro_channelf);
+   set_variables();
 }
 
 void retro_reset(void)
@@ -232,7 +240,8 @@ void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = 
    {
-      { "press_f_screen_size", "Screen size; normal|extended"},
+      { "press_f_screen_size",       "Screen size; normal|extended"},
+      { "press_f_skip_verification", "Skip cartridge verification; disabled|enabled"},
       { NULL, NULL },
    };
    static const struct retro_controller_description port[] = {
