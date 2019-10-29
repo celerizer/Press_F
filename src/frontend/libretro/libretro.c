@@ -40,6 +40,33 @@ void display_message(const char *msg)
    environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
 }
 
+void handle_input(void)
+{
+   input_poll_cb();
+   set_input_button(0, INPUT_TIME,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L));
+   set_input_button(0, INPUT_MODE,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT));
+   set_input_button(0, INPUT_HOLD,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R));
+   set_input_button(0, INPUT_START,      input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START));
+
+   set_input_button(1, INPUT_RIGHT,      input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
+   set_input_button(1, INPUT_LEFT,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
+   set_input_button(1, INPUT_BACK,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN));
+   set_input_button(1, INPUT_FORWARD,    input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
+   set_input_button(1, INPUT_ROTATE_CCW, input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
+   set_input_button(1, INPUT_ROTATE_CW,  input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
+   set_input_button(1, INPUT_PULL,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(1, INPUT_PUSH,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
+
+   set_input_button(4, INPUT_RIGHT,      input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
+   set_input_button(4, INPUT_LEFT,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
+   set_input_button(4, INPUT_BACK,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN));
+   set_input_button(4, INPUT_FORWARD,    input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
+   set_input_button(4, INPUT_ROTATE_CCW, input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
+   set_input_button(4, INPUT_ROTATE_CW,  input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
+   set_input_button(4, INPUT_PULL,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+   set_input_button(4, INPUT_PUSH,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
+}
+
 bool load_system_file(char *filename, u8 *rom_data, u16 rom_size)
 {
    char rom_filename[4096];
@@ -68,7 +95,7 @@ bool load_system_file(char *filename, u8 *rom_data, u16 rom_size)
   return true;
 }
 
-void set_variables()
+void set_variables(void)
 {
    struct retro_variable var = {0};
 
@@ -96,6 +123,11 @@ void set_variables()
       retro_channelf.rom[0x0015] = 0x2B;
       retro_channelf.rom[0x0016] = 0x2B;
    }
+
+   var.key = "press_f_cpu_clock";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      retro_channelf.total_cycles = atoi(var.value);
 }
 
 /* libretro API */
@@ -140,36 +172,8 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
    return false;
 }
 
-void retro_unload_game()
+void retro_unload_game(void)
 {
-   
-}
-
-void handle_input(void)
-{
-   input_poll_cb();
-   set_input_button(0, INPUT_TIME,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L));
-   set_input_button(0, INPUT_MODE,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT));
-   set_input_button(0, INPUT_HOLD,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R));
-   set_input_button(0, INPUT_START,      input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START));
-
-   set_input_button(1, INPUT_RIGHT,      input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
-   set_input_button(1, INPUT_LEFT,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
-   set_input_button(1, INPUT_BACK,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN));
-   set_input_button(1, INPUT_FORWARD,    input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
-   set_input_button(1, INPUT_ROTATE_CCW, input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
-   set_input_button(1, INPUT_ROTATE_CW,  input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
-   set_input_button(1, INPUT_PULL,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
-   set_input_button(1, INPUT_PUSH,       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
-
-   set_input_button(4, INPUT_RIGHT,      input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
-   set_input_button(4, INPUT_LEFT,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
-   set_input_button(4, INPUT_BACK,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN));
-   set_input_button(4, INPUT_FORWARD,    input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
-   set_input_button(4, INPUT_ROTATE_CCW, input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y));
-   set_input_button(4, INPUT_ROTATE_CW,  input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
-   set_input_button(4, INPUT_PULL,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
-   set_input_button(4, INPUT_PUSH,       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
 }
 
 void retro_run(void)
@@ -218,7 +222,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->timing.sample_rate    = 44100;
 }
 
-void retro_deinit()
+void retro_deinit(void)
 {
 }
 
@@ -242,6 +246,7 @@ void retro_set_environment(retro_environment_t cb)
    {
       { "press_f_screen_size",       "Screen size; normal|extended"},
       { "press_f_skip_verification", "Skip cartridge verification; disabled|enabled"},
+      { "press_f_cpu_clock",         "CPU cycles; 30000|35000|40000|45000|50000|55000|60000|25000"},
       { NULL, NULL },
    };
    static const struct retro_controller_description port[] = {

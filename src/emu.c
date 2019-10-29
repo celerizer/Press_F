@@ -158,7 +158,6 @@ u8* isar(channelf_t *system)
 
    if (opcode == 0x0D)
       ISAR = (ISAR & 0x38) | ((ISAR + 1) & 0x07);
-   /* TODO: Gross! */
    else if (opcode == 0x0E)
       ISAR = (ISAR & 0x38) | ((ISAR - 1) & 0x07);
 
@@ -838,6 +837,14 @@ u8 pressf_init(channelf_t *system)
    operations[0x8E] = adc;
    operations[0x8F] = br7;
 
+   operations[0x3F] = invalid_opcode;
+   operations[0x4F] = invalid_opcode;
+   operations[0x5F] = invalid_opcode;
+   operations[0xCF] = invalid_opcode;
+   operations[0xDF] = invalid_opcode;
+   operations[0xEF] = invalid_opcode;
+   operations[0xFF] = invalid_opcode;
+
    system->functions = calloc(ROM_CART_SIZE + ROM_BIOS_SIZE * 2, sizeof(void(*)(channelf_t*)));
    for (i = 0; i < ROM_CART_SIZE + ROM_BIOS_SIZE * 2; i++)
    {
@@ -848,44 +855,33 @@ u8 pressf_init(channelf_t *system)
       else
          printf("HLE function found: %04lX - %p\n", i, system->functions[i]);
    }
-   system->total_cycles = 25000;
+   system->total_cycles = 30000;
 
    return TRUE;
 }
 
+/* TODO: Add SAFETY checks here */
 void pressf_step(channelf_t *system)
 {
    u8 op = current_op(system);
 
-   if (operations[op] != NULL)
-   {
-#ifdef LOGGING
-      print_machine(system);
-#endif
-
-      operations[op](system);
-      PC0++;
-   }
-   else
-   {
-      printf("Unknown or unsupported opcode %02X at %04X\n", op, PC0);
-      exit(0);
-   }
+   operations[op](system);
+   PC0++;
 }
 
 u8 pressf_run(channelf_t *system)
 {
+#ifdef PRESS_F_SAFETY
    if (!system)
       return FALSE;
-   else
+#endif
+
+   system->cycles = 0;
+   do
    {
-      system->cycles = 0;
-      do
-      {
-         pressf_step(system);
-         system->cycles += 10;
-      } while (system->total_cycles > system->cycles);
-   }
+      pressf_step(system);
+      system->cycles += 10;
+   } while (system->total_cycles > system->cycles);
 
    return TRUE;
 }
