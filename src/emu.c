@@ -28,10 +28,7 @@
 #define PC0  system->pc0
 #define PC1  system->pc1
 
-#define F8_OP(a) void a(channelf_t *system)
-
 static void (*operations[256])(channelf_t *system);
-static unsigned long instruction_count;
 
 void print_machine(channelf_t *system)
 {

@@ -38,7 +38,6 @@ HEADERS += \
     src/frontend/qt/registerswindow.h \
     src/hle.h \
     src/input.h \
-    src/read.h \
     src/screen.h \
     src/sound.h \
     src/types.h \

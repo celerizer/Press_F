@@ -20,6 +20,7 @@ CFLAGS := -DBIG_ENDIAN=0
 SOURCES_C := \
    $(CORE_DIR)/emu.c \
    $(CORE_DIR)/file.c \
+   $(CORE_DIR)/font.c \
    $(CORE_DIR)/hle.c \
    $(CORE_DIR)/input.c \
    $(CORE_DIR)/screen.c \

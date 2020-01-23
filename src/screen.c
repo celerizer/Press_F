@@ -9,7 +9,7 @@ static u8 screen_dirty_any;
 static u8 screen_dirty[64];
 
 /* The palette index is inversed to save a calculation in GET_PALETTE */
-const u16 PIXEL_COLOR_RGB565[4][4] = 
+static const u16 PIXEL_COLOR_RGB565[4][4] =
 {
    /* Green background */
    {0x066B, 0xF98A, 0x49FE, 0x97F4},

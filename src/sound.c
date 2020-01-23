@@ -6,7 +6,7 @@
 #include "sound.h"
 #include "wave.h"
 
-const i16 SOUND_FREQUENCIES[4] = 
+static const i16 SOUND_FREQUENCIES[4] =
 {
    0,
    1000,
