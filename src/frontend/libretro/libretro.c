@@ -162,7 +162,10 @@ void retro_reset(void)
 bool retro_load_game(const struct retro_game_info *info)
 {
    if (info && !string_is_empty(info->path))
-      return load_cartridge(&retro_channelf, info->data, info->size);
+   {
+      memcpy(&retro_channelf.rom[0x800], info->data, info->size);
+      return true;//load_cartridge(&retro_channelf, info->data, info->size);
+   }
    else
       return true;
 }
