@@ -79,7 +79,8 @@ void RegisterLineEdit::onRefresh16Bit()
 
 RegistersWindow::RegistersWindow()
 {
-    QGridLayout *Layout = new QGridLayout;
+    char temp_string[256];
+    u8 i, j;
 
     m_CommandsList = new QTableWidget();
     m_CommandsList->horizontalHeader()->setVisible(false);
@@ -89,6 +90,17 @@ RegistersWindow::RegistersWindow()
     m_CommandsList->setRowCount(sizeof(g_ChannelF.rom));
     m_CommandsList->setColumnCount(2);
     connect(m_CommandsList, SIGNAL(cellClicked(int, int)), this, SLOT(onClickCommand(int, int)));
+    for (int i = 0; i < sizeof(g_ChannelF.rom); i++)
+    {
+       snprintf(temp_string, sizeof(temp_string), "%04X", i);
+       m_CommandsList->setItem(i, 0, new QTableWidgetItem(QString(temp_string)));
+
+       if (g_ChannelF.rom[i] < 12)
+          snprintf(temp_string, 256, opcodes[g_ChannelF.rom[i]].format, g_ChannelF.rom[i], g_ChannelF.rom[i + 1], g_ChannelF.rom[i + 2]);
+       else
+          snprintf(temp_string, 256, "Command: %02X", g_ChannelF.rom[i]);
+       m_CommandsList->setItem(i, 1, new QTableWidgetItem(QString(temp_string)));
+    }
 
     m_CommandDescription = new QLabel();
     m_A    = new RegisterLineEdit("A (Accumulator)",              &g_ChannelF.c3850.accumulator);
@@ -110,6 +122,8 @@ RegistersWindow::RegistersWindow()
     RegistersBox->addWidget(m_Dc1, 2, 1);
     RegistersGroupBox->setLayout(RegistersBox);
 
+    QGroupBox *ScratchpadGroupBox = new QGroupBox("Scratchpad RAM");
+    QGridLayout* ScratchpadBox = new QGridLayout();
     m_ScratchpadTable = new QTableWidget();
     m_ScratchpadTable->setRowCount(8);
     m_ScratchpadTable->setColumnCount(8);
@@ -119,31 +133,46 @@ RegistersWindow::RegistersWindow()
     m_ScratchpadTable->verticalHeader()->setVisible(false);
     m_ScratchpadTable->verticalHeader()->setDefaultSectionSize(16);
     m_ScratchpadTable->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ScratchpadBox->addWidget(m_ScratchpadTable);
+    ScratchpadGroupBox->setLayout(ScratchpadBox);
+    for (i = 0; i < 8; i++)
+       for (j = 0; j < 8; j++)
+          m_ScratchpadTable->setItem(i, j, new QTableWidgetItem());
 
     /* Finalize window layout */
+    QGridLayout *Layout = new QGridLayout;
     Layout->addWidget(m_CommandsList,       0, 0, 2, 1);
     Layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
-    Layout->addWidget(m_ScratchpadTable,    1, 1, 1, 1);
+    Layout->addWidget(ScratchpadGroupBox,   1, 1, 1, 1);
     Layout->addWidget(m_CommandDescription, 2, 0, 1, 2);
     setLayout(Layout);
 
-    char temp_string[256];
-    for (int i = 0; i < sizeof(g_ChannelF.rom); i++)
-    {
-       snprintf(temp_string, sizeof(temp_string), "%04X", i);
-       m_CommandsList->setItem(i, 0, new QTableWidgetItem(QString(temp_string)));
-
-       if (g_ChannelF.rom[i] < 12)
-          snprintf(temp_string, 256, opcodes[g_ChannelF.rom[i]].format, g_ChannelF.rom[i], g_ChannelF.rom[i + 1], g_ChannelF.rom[i + 2]);
-       else
-          snprintf(temp_string, 256, "Command: %02X", g_ChannelF.rom[i]);
-       m_CommandsList->setItem(i, 1, new QTableWidgetItem(QString(temp_string)));
-    }
+    m_Timer = new QTimer(this);
+    m_Timer->start(10);
+    connect(m_Timer, SIGNAL(timeout()), this, SLOT(onRefresh()));
 }
 
 void RegistersWindow::onClickCommand(int Row, int Column)
 {
    m_CommandDescription->setText(opcodes[g_ChannelF.rom[Row]].description);
+}
+
+void RegistersWindow::onRefresh()
+{
+   u8 i, j;
+
+   for (i = 0; i < 8; i++)
+   {
+      for (j = 0; j < 8; j++)
+      {
+         m_ScratchpadTable->item(i, j)->setText(QString::number(g_ChannelF.c3850.scratchpad[i * 8 + j], 16).toUpper());
+         m_ScratchpadTable->item(i, j)->setBackgroundColor(Qt::black);
+      }
+   }
+
+   i = g_ChannelF.c3850.isar / 8;
+   j = g_ChannelF.c3850.isar - i * 8;
+   m_ScratchpadTable->item(i, j)->setBackgroundColor(Qt::blue);
 }
 
 #endif

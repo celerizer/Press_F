@@ -55,6 +55,7 @@ private:
 
 private slots:
     void onClickCommand(int Row, int Column);
+    void onRefresh     ();
 };
 
 #endif

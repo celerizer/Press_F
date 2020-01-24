@@ -4,6 +4,7 @@
 
 #include "emu.h"
 #include "file.h"
+#include "font.h"
 #include "input.h"
 #include "screen.h"
 #include "sound.h"
@@ -128,6 +129,18 @@ void set_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
       retro_channelf.total_cycles = atoi(var.value);
+
+   var.key = "press_f_font";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (string_is_equal(var.value, "cute"))
+         font_load(&retro_channelf, FONT_CUTE);
+      else if (string_is_equal(var.value, "skinny"))
+         font_load(&retro_channelf, FONT_SKINNY);
+      else
+         font_reset(&retro_channelf);
+   }
 }
 
 /* libretro API */
@@ -250,6 +263,7 @@ void retro_set_environment(retro_environment_t cb)
       { "press_f_screen_size",       "Screen size; normal|extended"},
       { "press_f_skip_verification", "Skip cartridge verification; disabled|enabled"},
       { "press_f_cpu_clock",         "CPU cycles; 30000|35000|40000|45000|50000|55000|60000|25000"},
+      { "press_f_font",              "Font; fairchild|cute|skinny"},
       { NULL, NULL },
    };
    static const struct retro_controller_description port[] = {

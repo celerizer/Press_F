@@ -38,7 +38,7 @@ void sound_write()
    /* Fill any unwritten samples with the last known tone */
    if (last_tick != PF_SAMPLES - 1)
    {
-      for (i = last_tick; i < PF_SAMPLES; i++)
+      for (i = last_tick + 1; i < PF_SAMPLES; i++)
          frequencies[i] = frequency_last;
    }
 
