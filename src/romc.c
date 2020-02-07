@@ -1,3 +1,28 @@
+/*
+   Copyright (c) 2020 Celerizer
+   ---
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
+   
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+   IN THE SOFTWARE.
+   ---
+   There's a lot of repeated code here to make sure these small functions get
+   properly "inlined" with C89.
+*/
+
 #ifndef PRESS_F_ROMC_C
 #define PRESS_F_ROMC_C
 
@@ -53,6 +78,8 @@ ROMC_OP(romc00)
    }
    if (return_value)
       system->dbus = *return_value;
+
+   system->cycles -= CYCLE_SHORT + CYCLE_LONG;
 }
 
 /*
@@ -83,6 +110,8 @@ ROMC_OP(romc01)
       device = &system->f8devices[i];
       device->pc0 += system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /* 
@@ -108,6 +137,8 @@ ROMC_OP(romc02)
    }
    if (return_value)
       system->dbus = *return_value;
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -139,6 +170,8 @@ ROMC_OP(romc04)
       device = &system->f8devices[i];
       device->pc0 = device->pc1;
    }
+
+   system->cycles -= CYCLE_SHORT;
 }
 
 /*
@@ -160,6 +193,8 @@ ROMC_OP(romc05)
          *f8device_virtual_ptr(device, device->dc0) = system->dbus;
       device->dc0++;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -174,6 +209,8 @@ ROMC_OP(romc05)
 ROMC_OP(romc06)
 {
    system->dbus = system->devices[0].dc0 & 0xFF00;
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -186,6 +223,8 @@ ROMC_OP(romc06)
 ROMC_OP(romc07)
 {
    system->dbus = system->devices[0].pc1 & 0xFF00;
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -211,6 +250,8 @@ ROMC_OP(romc08)
       device->pc1 = device->pc0;
       device->pc0 = system->dbus * 0x100 + system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -231,6 +272,8 @@ ROMC_OP(romc09)
       if (f8device_contains(device, device->dc0))
          system->dbus = device->dc0 & 0xFF;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -249,6 +292,8 @@ ROMC_OP(romc0a)
       device = &system->f8devices[i];
       device->dc0 += system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -270,6 +315,8 @@ ROMC_OP(romc0b)
       if (f8device_contains(device, device->pc1))
          system->dbus = device->pc1 & 0xFF;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -300,6 +347,8 @@ ROMC_OP(romc0c)
       device = &system->f8devices[i];
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -318,6 +367,8 @@ ROMC_OP(romc0d)
       device = &system->f8devices[i];
       device->pc1 = device->pc0 + 1;
    }
+
+   system->cycles -= CYCLE_SHORT;
 }
 
 /*
@@ -344,6 +395,8 @@ ROMC_OP(romc0e)
       device = &system->f8devices[i];
       device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 /*
@@ -354,7 +407,7 @@ ROMC_OP(romc0e)
    contents of PC0 into PC1. All devices must move the contents of the data bus
    into the low order byte of PC0.
 
-   NOTE: Interrupt stuf is TODO!
+   NOTE: Interrupt stuff is TODO!
 */
 ROMC_OP(romc0f)
 {
@@ -368,6 +421,194 @@ ROMC_OP(romc0f)
       device->pc1 = device->pc0;
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 0 0 0 / 10 / L
+   ---
+   Inhibit any modification to the interrupt priority logic.
+
+   NOTE: TODO? What is this
+*/
+ROMC_OP(romc10)
+{
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 0 0 1 / 11 / L
+   ---
+   The device whose memory space includes the contents of PC0 must place the
+   contents of the addressed memory word onto the data bus. All devices must
+   then move the contents of the data bus to the upper byte of DC0.
+*/
+ROMC_OP(romc11)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+
+      if (f8device_contains(device, device->pc0))
+         system->dbus = *f8device_virtual_ptr(device->pc0);
+   }
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 0 1 0 / 12 / L
+   ---
+   All devices copy the contents of PC0 into PC1. All devices then move the 
+   contents of the data bus into the low order byte of PC0.
+*/
+ROMC_OP(romc12)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+
+      device->pc1 = device->pc0;
+      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 0 1 1 / 13 / L
+   ---
+   TODO: This
+*/
+ROMC_OP(romc13)
+{
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 1 0 0 / 14 / L
+   ---
+   All devices move the contents of the dbus into the high order byte of PC0.
+*/
+ROMC_OP(romc14)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->pc0 = (device->pc0 & 0x00FF) + system->dbus * 0x100;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 1 0 1 / 15 / L
+   ---
+   All devices move the contents of the dbus into the high order byte of PC1.
+*/
+ROMC_OP(romc15)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->pc1 = (device->pc1 & 0x00FF) + system->dbus * 0x100;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 1 1 0 / 16 / L
+   ---
+   All devices move the contents of the dbus into the high order byte of DC0.
+*/
+ROMC_OP(romc16)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 0 1 1 1 / 17 / L
+   ---
+   All devices move the contents of the dbus into the low order byte of PC0.
+*/
+ROMC_OP(romc17)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 0 0 0 / 18 / L
+   ---
+   All devices move the contents of the dbus into the low order byte of PC1.
+*/
+ROMC_OP(romc18)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->pc1 = (device->pc1 & 0xFF00) + system->dbus;
+   }
+
+   system->cycles -= CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 0 0 1 / 19 / L
+   ---
+   All devices move the contents of the dbus into the low order byte of DC0.
+*/
+ROMC_OP(romc19)
+{
+   f8device_t *device;
+   u8 i;
+
+   for (i = 0; i < system->f8device_count; i++)
+   {
+      device = &system->f8devices[i];
+      device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
+   }
+
+   system->cycles -= CYCLE_LONG;
 }
 
 #endif
