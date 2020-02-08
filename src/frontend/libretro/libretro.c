@@ -128,7 +128,7 @@ void set_variables(void)
    var.key = "press_f_cpu_clock";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-      retro_channelf.total_cycles = atoi(var.value);
+      retro_channelf.total_cycles = 2000000 / 60;//atoi(var.value);
 
    var.key = "press_f_font";
 

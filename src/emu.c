@@ -192,6 +192,9 @@ void lr(u8 *dest, u8 *src)
    *dest = *src;
 }
 
+#define S 4
+#define L 6
+
 /* 
    00 - 03
    LR A, DPCHR
@@ -200,6 +203,7 @@ void lr(u8 *dest, u8 *src)
 F8_OP(lr_a_dpchr)
 {
    lr(&A, dpchr(system));
+   system->cycles += S;
 }
 
 /* 
@@ -210,6 +214,7 @@ F8_OP(lr_a_dpchr)
 F8_OP(lr_dpchr_a)
 {
    lr(dpchr(system), &A);
+   system->cycles += S;
 }
 
 /*
@@ -220,6 +225,7 @@ F8_OP(lr_dpchr_a)
 F8_OP(lr_k_pc1)
 {
    write_16(&KU, PC1);
+   system->cycles += L + L + S;
 }
 
 /*
@@ -230,12 +236,14 @@ F8_OP(lr_k_pc1)
 F8_OP(lr_pc1_k)
 {
    PC1 = read_16(&KU);
+   system->cycles += L + L + S;
 }
 
 /* 0A */
 F8_OP(lr_a_isar)
 {
    lr(&A, &ISAR);
+   system->cycles += S;
 }
 
 /* 0B */
@@ -243,6 +251,7 @@ F8_OP(lr_isar_a)
 {
    lr(&ISAR, &A);
    ISAR &= 0x3F;
+   system->cycles += S;
 }
 
 /* 0C */
@@ -251,36 +260,42 @@ F8_OP(pk)
 {
    PC1 = PC0 + 1;
    PC0 = read_16(&KU) - 1;
+   system->cycles += L + L + S;
 }
 
 /* 0D */
 F8_OP(lr_pc0_q)
 {
    PC0 = read_16(&QU) - 1;
+   system->cycles += L + L + S;
 }
 
 /* 0E */
 F8_OP(lr_q_dc0)
 {
    write_16(&QU, DC0);
+   system->cycles += L + L + S;
 }
 
 /* 0F */
 F8_OP(lr_dc0_q)
 {
    DC0 = read_16(&QU);
+   system->cycles += L + L + S;
 }
 
 /* 10 */
 F8_OP(lr_dc0_h)
 {
    DC0 = read_16(&HU);
+   system->cycles += L + L + S;
 }
 
 /* 11 */
 F8_OP(lr_h_dc0)
 {
    write_16(&HU, DC0);
+   system->cycles += L + L + S;
 }
 
 /* ======================================================= F8 shift instructions */
@@ -297,24 +312,28 @@ void shift(channelf_t *system, u8 right, u8 amount)
 F8_OP(sr_a)
 {
    shift(system, TRUE, 1);
+   system->cycles += S;
 }
 
 /* 13 */
 F8_OP(sl_a)
 {
    shift(system, FALSE, 1);
+   system->cycles += S;
 }
 
 /* 14 */
 F8_OP(sr_a_4)
 {
    shift(system, TRUE, 4);
+   system->cycles += S;
 }
 
 /* 15 */
 F8_OP(sl_a_4)
 {
    shift(system, FALSE, 4);
+   system->cycles += S;
 }
 
 /* 16 */
@@ -322,6 +341,7 @@ F8_OP(lm)
 {
    A = get_rom(system, DC0);
    DC0++;
+   system->cycles += L + S;
 }
 
 /* 17 */
@@ -329,6 +349,7 @@ F8_OP(st)
 {
    /* Does DC0U zero-fill? */
    DC0 = A + 1;
+   system->cycles += L + S;
 }
 
 /* 18 */
@@ -336,42 +357,49 @@ F8_OP(com)
 {
    A ^= 0xFF;
    add(system, &A, 0);
+   system->cycles += S;
 }
 
 /* 19 */
 F8_OP(lnk)
 {
    add(system, &A, get_status(system, STATUS_CARRY) ? 1 : 0);
+   system->cycles += S;
 }
 
 /* 1A */
 F8_OP(di)
 {
    set_status(system, STATUS_INTERRUPTS, FALSE);
+   system->cycles += S + S;
 }
 
 /* 1B */
 F8_OP(ei)
 {
    set_status(system, STATUS_INTERRUPTS, TRUE);
+   system->cycles += S + S;
 }
 
 /* 1C */
 F8_OP(pop)
 {
    PC0 = PC1 - 1;
+   system->cycles += S + S;
 }
 
 /* 1D */
 F8_OP(lr_w_j)
 {
    lr(&W, &J);
+   system->cycles += S + S;
 }
 
 /* 1E */
 F8_OP(lr_j_w)
 {
    lr(&J, &W);
+   system->cycles += S;
 }
 
 /*
@@ -382,6 +410,7 @@ F8_OP(lr_j_w)
 F8_OP(inc)
 {
    add(system, &A, 1);
+   system->cycles += S;
 }
 
 /* 
@@ -392,6 +421,7 @@ F8_OP(inc)
 F8_OP(li)
 {
    A = get_immediate(system);
+   system->cycles += L + S;
 }
 
 /* Hack? We add 0 to accumulator to set flags */
@@ -400,6 +430,7 @@ F8_OP(ni)
 {
    A &= get_immediate(system);
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 22 */
@@ -407,6 +438,7 @@ F8_OP(oi)
 {
    A |= get_immediate(system);
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 23 */
@@ -414,12 +446,14 @@ F8_OP(xi)
 {
    A ^= get_immediate(system);
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 24 */
 F8_OP(ai)
 {
    add(system, &A, get_immediate(system));
+   system->cycles += L + S;
 }
 
 /* 25 */
@@ -429,6 +463,7 @@ F8_OP(ci)
    u8 immediate = get_immediate(system);
 
    add(system, &immediate, ~A + 1);
+   system->cycles += L + S;
 }
 
 /* 
@@ -442,6 +477,7 @@ F8_OP(in)
 
    A = system->io[port];
    add(system, &A, 0);
+   system->cycles += L + L + S;
 }
 
 /* 
@@ -454,6 +490,7 @@ F8_OP(out)
    u8 port = get_immediate(system) & (IO_PORTS - 1);
 
    system->io[port] = A;
+   system->cycles += L + L + S;
 }
 
 /* 28 */
@@ -464,6 +501,7 @@ F8_OP(pi)
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
    PC0--; //hack
+   system->cycles += L + S + L + L + S;
 }
 
 /* 29 */
@@ -473,6 +511,7 @@ F8_OP(jmp)
    PC0 = get_immediate(system);
    PC0 += A * 0x100;
    PC0--; //hack
+   system->cycles += L + L + L + S;
 }
 
 /* 2A */
@@ -480,12 +519,14 @@ F8_OP(dci)
 {
    DC0 = get_immediate(system) * 0x100;
    DC0 += get_immediate(system);
+   system->cycles += L + S + L + S + S;
 }
 
 /* 2B */
 F8_OP(nop)
 {
    /* NOP! */
+   system->cycles += S;
 }
 
 /* 2C */
@@ -494,6 +535,7 @@ F8_OP(xdc)
    DC0 ^= DC1;
    DC1 ^= DC0;
    DC0 ^= DC1;
+   system->cycles += S + S;
 }
 
 /* 30 - 3F */
@@ -504,6 +546,7 @@ F8_OP(ds)
 
    if (address != NULL)
       add(system, address, 0xFF);
+   system->cycles += L;
 }
 
 /* 40 - 4F */
@@ -513,6 +556,7 @@ F8_OP(lr_a_r)
 
    if (address != NULL)
       lr(&A, address);
+   system->cycles += S;
 }
 
 /* 50 - 5F */
@@ -522,6 +566,7 @@ F8_OP(lr_r_a)
 
    if (address != NULL)
       lr(address, &A);
+   system->cycles += S;
 }
 
 /* 60 - 67 */
@@ -532,6 +577,7 @@ F8_OP(lisu)
    /* Mask to lower 3 bits, load new upper */
    ISAR &= 0x07;
    ISAR |= immediate;
+   system->cycles += S;
 }
 
 /* 68 - 6F */
@@ -542,27 +588,37 @@ F8_OP(lisl)
    /* Mask to upper 3 bits, load new lower */
    ISAR &= 0x38;
    ISAR |= immediate;
+   system->cycles += S;
 }
 
 /* 70 */
 F8_OP(clr)
 {
    A = 0;
+   system->cycles += S;
 }
 
 /* 71 - 7F */
 F8_OP(lis)
 {
    A = current_op(system) & 0x0F;
+   system->cycles += S;
 }
 
 /* 80 - 87 */
 F8_OP(bt_n)
 {
    if ((current_op(system) & 0x07) & W)
+   {
+      system->cycles += S + S + L;
       PC0 += (i8)next_op(system);
+   }
    else
+   {
+      system->cycles += S;
       PC0++;
+   }
+   system->cycles += S + S;
 }
 
 /* 88 */
@@ -570,6 +626,7 @@ F8_OP(am)
 {
    add(system, &A, get_rom(system, DC0));
    DC0++;
+   system->cycles += L + S;
 }
 
 /* 89 */
@@ -577,6 +634,7 @@ F8_OP(amd)
 {
    add_bcd(system, &A, get_rom(system, DC0));
    DC0++;
+   system->cycles += L + S;
 }
 
 /* 8A */
@@ -585,6 +643,7 @@ F8_OP(nm)
    A &= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 8B */
@@ -593,6 +652,7 @@ F8_OP(om)
    A |= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 8C */
@@ -601,6 +661,7 @@ F8_OP(xm)
    A ^= get_rom(system, DC0);
    DC0++;
    add(system, &A, 0);
+   system->cycles += L + S;
 }
 
 /* 8D */
@@ -610,30 +671,42 @@ F8_OP(cm)
 
    add(system, &temp, ~A + 1);
    DC0++;
+   system->cycles += L + S;
 }
 
 /* 8E */
 F8_OP(adc)
 {
    DC0 += (i8)A;
+   system->cycles += L + S;
 }
 
 /* 8F */
 F8_OP(br7)
 {
    if ((ISAR & 7) != 7)
+   {
       PC0 += (i8)next_op(system);
+      system->cycles += L + S;
+   }
    else
+   {
       PC0++;
+   }
+   system->cycles += S + S;
 }
 
 /* 90 - 9F */
 F8_OP(bf)
 {
    if (((current_op(system) & 0x0F) & W) == 0)
+   {
       PC0 += (i8)next_op(system);
+      system->cycles += L;
+   }
    else
       PC0++;
+   system->cycles += S + S + S + S + S;
 }
 
 /* 
@@ -654,6 +727,11 @@ F8_OP(ins)
 
    A = system->io[port];
    add(system, &A, 0);
+
+   if (port < 2)
+      system->cycles += S + S;
+   else
+      system->cycles += L + L + S;
 }
 
 /* 
@@ -679,6 +757,11 @@ F8_OP(outs)
    }
    else if (port == 5)
       sound_push_back(system->io[5] >> 6, system->cycles, system->total_cycles);
+
+   if (port < 2)
+      system->cycles += S + S;
+   else
+      system->cycles += L + L + S;
 }
 
 /*
@@ -692,6 +775,7 @@ F8_OP(as)
 
    if (address != NULL)
       add(system, &A, *address);
+   system->cycles += S;
 }
 
 /* 
@@ -705,6 +789,7 @@ F8_OP(asd)
 
    if (address != NULL)
       add_bcd(system, &A, *address);
+   system->cycles += S + S;
 }
 
 /* 
@@ -721,6 +806,7 @@ F8_OP(xs)
       A ^= *address;
       add(system, &A, 0);
    }
+   system->cycles += S;
 }
 
 /* 
@@ -737,6 +823,7 @@ F8_OP(ns)
       A &= *address;
       add(system, &A, 0);
    }
+   system->cycles += S;
 }
 
 /*
@@ -877,8 +964,7 @@ u8 pressf_run(channelf_t *system)
    do
    {
       pressf_step(system);
-      system->cycles += 10;
-   } while (system->total_cycles > system->cycles);
+   } while (system->cycles < system->total_cycles);
 
    return TRUE;
 }
