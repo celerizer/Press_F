@@ -11,17 +11,17 @@
 #include "screen.h"
 #include "sound.h"
 
-#define A    system->c3850.accumulator
-#define ISAR system->c3850.isar
-#define W    system->c3850.status_register
+#define A    system->f3850.accumulator
+#define ISAR system->f3850.isar
+#define W    system->f3850.status_register
 
-#define J    system->c3850.scratchpad[0x09]
-#define HU   system->c3850.scratchpad[0x0A]
-#define HL   system->c3850.scratchpad[0x0B]
-#define KU   system->c3850.scratchpad[0x0C]
-#define KL   system->c3850.scratchpad[0x0D]
-#define QU   system->c3850.scratchpad[0x0E]
-#define QL   system->c3850.scratchpad[0x0F]
+#define J    system->f3850.scratchpad[0x09]
+#define HU   system->f3850.scratchpad[0x0A]
+#define HL   system->f3850.scratchpad[0x0B]
+#define KU   system->f3850.scratchpad[0x0C]
+#define KL   system->f3850.scratchpad[0x0D]
+#define QU   system->f3850.scratchpad[0x0E]
+#define QL   system->f3850.scratchpad[0x0F]
 
 #define DC0  system->dc0
 #define DC1  system->dc1
@@ -45,32 +45,26 @@ void print_machine(channelf_t *system)
    {
       printf("| RAM [%02X]: ", i * 0x10);
       for (u8 j = 0; j < 16; j++)
-         printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
+         printf("%02X ", system->f3850.scratchpad[(i * 0x10 + j)]);
       printf("|\n");
    }
 }
 
-u16 read_16(void *src)
+u16 read_16(u16 *src)
 {
-   u16 value;
-
-//#ifndef BIG_ENDIAN
-   value = ((u8*)src)[0] * 0x100 + ((u8*)src)[1];
-//#else
-//   memcpy(&value, src, 2);
-//#endif
-
-   return value;
+#ifndef BIG_ENDIAN
+   return __builtin_bswap16(*src);
+#else
+   return *src;
+#endif
 }
 
 void write_16(void *dest, u16 src)
 {
-//#ifndef BIG_ENDIAN
-   ((u8*)dest)[0] = ((src & 0xFF00) >> 8) & 0xFF;
-   ((u8*)dest)[1] = src & 0xFF;
-//#else
-//   memcpy(dest, &src, 2);
-//#endif
+#ifndef BIG_ENDIAN
+   src = __builtin_bswap16(src);
+#endif
+   memcpy(dest, &src, 2);
 }
 
 u8 get_status(channelf_t *system, const u8 flag)
@@ -148,10 +142,10 @@ u8* isar(channelf_t *system)
    if (opcode < 0x0C)
    {
       /* Address scratchpad directly for first 12 bytes */
-      address = &system->c3850.scratchpad[opcode];
+      address = &system->f3850.scratchpad[opcode];
    }
    else if (opcode != 0x0F)
-      address = &system->c3850.scratchpad[ISAR];
+      address = &system->f3850.scratchpad[ISAR];
 
    if (opcode == 0x0D)
       ISAR = (ISAR & 0x38) | ((ISAR + 1) & 0x07);
@@ -841,7 +835,7 @@ u8 pressf_init(channelf_t *system)
 
    /* For testing BIOS */
    for (i = 0x00; i < 0x40; i++)
-      system->c3850.scratchpad[i] = 0xFF;
+      system->f3850.scratchpad[i] = 0xFF;
 
    for (i = 0x00; i < 0x04; i++)
    {
