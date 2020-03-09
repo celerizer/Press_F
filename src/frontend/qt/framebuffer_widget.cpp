@@ -30,10 +30,16 @@ void QPfFramebuffer::paintEvent(QPaintEvent *event)
    painter.drawImage(m_Rect, m_Texture);
 }
 
-void QPfFramebuffer::setScale(uint8_t scale)
+void QPfFramebuffer::setScale(const QSize& parent)
 {
-   m_Scale = scale;
-   m_Rect.setSize(QSize(SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale));
+   u8 x = parent.width()  / SCREEN_WIDTH;
+   u8 y = parent.height() / SCREEN_HEIGHT;
+   u8 final_scale = x > y ? y : x;
+
+   m_Scale = final_scale;
+   m_Rect.setSize(QSize(SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
+   force_draw_frame();
+   update();
 }
 
 #endif

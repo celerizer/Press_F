@@ -12,7 +12,7 @@ class QPfFramebuffer : public QWidget
 public:
    QPfFramebuffer(QWidget *parent);
 
-   void setScale(uint8_t scale);
+   void setScale(const QSize& parent);
 
 protected:
    QSize minimumSizeHint() const override;
