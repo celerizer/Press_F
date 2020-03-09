@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QToolBar>
 
+#include "framebuffer_widget.h"
+
 class MainWindow : public QWidget
 {
     Q_OBJECT
@@ -14,13 +16,12 @@ class MainWindow : public QWidget
 public:
     MainWindow();
 
-    QImage *m_Framebuffer;
-
 private:
     QGamepad  m_Gamepads[2];
-    QLabel   *m_Label;
     QTimer   *m_Timer;
     QToolBar *m_Toolbar;
+
+    QPfFramebuffer *m_Framebuffer;
 
     /* Audio stuff (TODO: Move to own file/class) */
     QBuffer      *m_AudioBuffer;

@@ -6,7 +6,6 @@ extern "C"
     #include "../../emu.h"
     #include "../../file.h"
     #include "../../input.h"
-    #include "../../screen.h"
     #include "../../sound.h"
 }
 
@@ -30,17 +29,9 @@ MainWindow::MainWindow()
 {
     QGridLayout *Layout = new QGridLayout;
 
-    m_Framebuffer = new QImage(SCREEN_WIDTH, SCREEN_HEIGHT, QImage::Format_RGB16);
-
     m_Timer = new QTimer(this);
     connect(m_Timer, SIGNAL(timeout()), this, SLOT(onFrame()));
     m_Timer->start(1000 / 60);
-
-    /* Set up the widget that displays emulated frames */
-    m_Label = new QLabel(this);
-    m_Label->setMinimumSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-    m_Label->setPixmap(QPixmap::fromImage(*m_Framebuffer));
-    m_Label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
 
     /* Setup toolbar */
     m_Toolbar = new QToolBar("File", this);
@@ -63,13 +54,6 @@ MainWindow::MainWindow()
     /* Setup window properties */
     setWindowTitle("Press F");
     setWindowIcon(QIcon(":/icons/logo"));
-
-    /* Finalize main window layout */
-    Layout->addWidget(m_Toolbar, 0, 0);
-    Layout->addWidget(m_Label,   1, 0);
-    Layout->setMargin(0);
-    Layout->setSpacing(0);
-    setLayout(Layout);
 
     /* Initialize emulation (TODO) */
     QFile BiosA("F:/msys64/home/andre/retroarch-cle/system/sl31253.rom");
@@ -106,6 +90,17 @@ MainWindow::MainWindow()
     /* TODO: Remove */
     RegistersWindow *m_Regs = new RegistersWindow();
     m_Regs->show();
+
+    /* Set up the widget that displays emulated frames */
+    m_Framebuffer = new QPfFramebuffer(this);
+
+    /* Finalize main window layout */
+    Layout->addWidget(m_Toolbar,     0, 0);
+    Layout->addWidget(m_Framebuffer, 1, 0);
+    Layout->setMargin(0);
+    Layout->setSpacing(0);
+    //Layout->setAlignment(m_Framebuffer, Qt::AlignHCenter);
+    setLayout(Layout);
 }
 
 void MainWindow::onFrame()
@@ -138,8 +133,7 @@ void MainWindow::onFrame()
     pressf_run(&g_ChannelF);
 
     /* Video */
-    if (draw_frame_rgb565(g_ChannelF.vram, (u16*)m_Framebuffer->bits()))
-        m_Label->setPixmap(QPixmap::fromImage(*m_Framebuffer).scaled(m_Label->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
+    m_Framebuffer->update();
 
     /* Audio */
     sound_write();
@@ -195,12 +189,7 @@ void MainWindow::dropEvent(QDropEvent *Event)
 
 void MainWindow::resizeEvent(QResizeEvent *Event)
 {
-    i32 NewScaleX = Event->size().width()  / SCREEN_WIDTH;
-    i32 NewScaleY = Event->size().height() / SCREEN_HEIGHT;
-    i32 FinalScale = NewScaleX > NewScaleY ? NewScaleY : NewScaleX;
-
-    force_draw_frame();
-    m_Label->setMaximumSize(SCREEN_WIDTH * FinalScale, SCREEN_HEIGHT * FinalScale);
+    m_Framebuffer->setScale(Event->size());
 }
 
 #endif

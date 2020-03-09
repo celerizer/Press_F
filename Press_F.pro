@@ -19,6 +19,7 @@ SOURCES += \
     src/emu.c \
     src/file.c \
     src/font.c \
+    src/frontend/qt/framebuffer_widget.cpp \
     src/frontend/qt/main.cpp \
     src/frontend/qt/mainwindow.cpp \
     src/frontend/qt/registerswindow.cpp \
@@ -33,6 +34,7 @@ HEADERS += \
     src/emu.h \
     src/file.h \
     src/font.h \
+    src/frontend/qt/framebuffer_widget.h \
     src/frontend/qt/main.h \
     src/frontend/qt/mainwindow.h \
     src/frontend/qt/registerswindow.h \
