@@ -30,17 +30,14 @@ MainWindow::MainWindow()
 {
     QGridLayout *Layout = new QGridLayout;
 
-    m_Framebuffer = new QImage(SCREEN_WIDTH, SCREEN_HEIGHT, QImage::Format_RGB16);
-
     m_Timer = new QTimer(this);
     connect(m_Timer, SIGNAL(timeout()), this, SLOT(onFrame()));
     m_Timer->start(1000 / 60);
 
-    /* Set up the widget that displays emulated frames */
-    m_Label = new QLabel(this);
+    /*m_Label = new QLabel(this);
     m_Label->setMinimumSize(SCREEN_WIDTH, SCREEN_HEIGHT);
     m_Label->setPixmap(QPixmap::fromImage(*m_Framebuffer));
-    m_Label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    m_Label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);*/
 
     /* Setup toolbar */
     m_Toolbar = new QToolBar("File", this);
@@ -64,12 +61,7 @@ MainWindow::MainWindow()
     setWindowTitle("Press F");
     setWindowIcon(QIcon(":/icons/logo"));
 
-    /* Finalize main window layout */
-    Layout->addWidget(m_Toolbar, 0, 0);
-    Layout->addWidget(m_Label,   1, 0);
-    Layout->setMargin(0);
-    Layout->setSpacing(0);
-    setLayout(Layout);
+
 
     /* Initialize emulation (TODO) */
     QFile BiosA("F:/msys64/home/andre/retroarch-cle/system/sl31253.rom");
@@ -106,6 +98,16 @@ MainWindow::MainWindow()
     /* TODO: Remove */
     RegistersWindow *m_Regs = new RegistersWindow();
     m_Regs->show();
+
+    /* Set up the widget that displays emulated frames */
+    m_Framebuffer = new QPfFramebuffer(this);
+
+    /* Finalize main window layout */
+    Layout->addWidget(m_Toolbar,     0, 0);
+    Layout->addWidget(m_Framebuffer, 1, 0);
+    Layout->setMargin(0);
+    Layout->setSpacing(0);
+    setLayout(Layout);
 }
 
 void MainWindow::onFrame()
@@ -137,9 +139,10 @@ void MainWindow::onFrame()
     /* Emulation loop */
     pressf_run(&g_ChannelF);
 
-    /* Video */
+    m_Framebuffer->update();
+    /* Video
     if (draw_frame_rgb565(g_ChannelF.vram, (u16*)m_Framebuffer->bits()))
-        m_Label->setPixmap(QPixmap::fromImage(*m_Framebuffer).scaled(m_Label->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
+        m_Label->setPixmap(QPixmap::fromImage(*m_Framebuffer).scaled(m_Label->size(), Qt::KeepAspectRatio, Qt::FastTransformation));*/
 
     /* Audio */
     sound_write();
@@ -199,8 +202,8 @@ void MainWindow::resizeEvent(QResizeEvent *Event)
     i32 NewScaleY = Event->size().height() / SCREEN_HEIGHT;
     i32 FinalScale = NewScaleX > NewScaleY ? NewScaleY : NewScaleX;
 
+    m_Framebuffer->setScale(FinalScale);
     force_draw_frame();
-    m_Label->setMaximumSize(SCREEN_WIDTH * FinalScale, SCREEN_HEIGHT * FinalScale);
 }
 
 #endif
