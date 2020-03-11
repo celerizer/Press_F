@@ -15,6 +15,7 @@ extern "C"
 
 #include <string>
 
+#include <QApplication>
 #include <QAudioBuffer>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -169,6 +170,11 @@ void MainWindow::onLoadCart()
 {
     loadCartridge(QFileDialog::getOpenFileName(this,
         tr("Load Cartridge"), "./games", tr("Channel F ROM Files (*.bin *.chf)")));
+}
+
+void MainWindow::closeEvent(QCloseEvent *Event)
+{
+   QApplication::quit();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *Event)

@@ -17,7 +17,12 @@ QPfFramebuffer::QPfFramebuffer(QWidget *parent) : QWidget(parent)
    m_Texture = QImage(SCREEN_WIDTH, SCREEN_HEIGHT, QImage::Format_RGB16);
 }
 
-QSize QPfFramebuffer::minimumSizeHint() const
+QSize QPfFramebuffer::getSize(void)
+{
+   return m_Rect.size();
+}
+
+QSize QPfFramebuffer::minimumSizeHint(void) const
 {
    return QSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 }
@@ -30,16 +35,23 @@ void QPfFramebuffer::paintEvent(QPaintEvent *event)
    painter.drawImage(m_Rect, m_Texture);
 }
 
-void QPfFramebuffer::setScale(const QSize& parent)
+bool QPfFramebuffer::setScale(const QSize& parent)
 {
    u8 x = parent.width()  / SCREEN_WIDTH;
    u8 y = parent.height() / SCREEN_HEIGHT;
    u8 final_scale = x > y ? y : x;
 
-   m_Scale = final_scale;
-   m_Rect.setSize(QSize(SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
-   force_draw_frame();
-   update();
+   if (m_Scale != final_scale)
+   {
+      m_Scale = final_scale;
+      m_Rect.setSize(QSize(SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
+      force_draw_frame();
+      update();
+
+      return true;
+   }
+
+   return false;
 }
 
 #endif

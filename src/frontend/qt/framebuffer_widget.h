@@ -12,10 +12,11 @@ class QPfFramebuffer : public QWidget
 public:
    QPfFramebuffer(QWidget *parent);
 
-   void setScale(const QSize& parent);
+   QSize getSize(void);
+   bool  setScale(const QSize& parent);
 
 protected:
-   QSize minimumSizeHint() const override;
+   QSize minimumSizeHint(void) const override;
    void  paintEvent(QPaintEvent *event) override;
 
 private:

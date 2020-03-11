@@ -35,9 +35,10 @@ private slots:
     void onLoadCart();
 
 protected:
-    void dragEnterEvent(QDragEnterEvent *Event) override final;
-    void dropEvent     (QDropEvent *Event)      override final;
-    void resizeEvent   (QResizeEvent *Event)    override final;
+    void closeEvent    (QCloseEvent *Event)     override;
+    void dragEnterEvent(QDragEnterEvent *Event) override;
+    void dropEvent     (QDropEvent *Event)      override;
+    void resizeEvent   (QResizeEvent *Event)    override;
 };
 
 #endif
