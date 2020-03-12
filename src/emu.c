@@ -860,9 +860,7 @@ u8 pressf_init(channelf_t *system)
 /* TODO: Add SAFETY checks here */
 void pressf_step(channelf_t *system)
 {
-   u8 op = current_op(system);
-
-   operations[op](system);
+   system->functions[PC0](system);
    PC0++;
 }
 
