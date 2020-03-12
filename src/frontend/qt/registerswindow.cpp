@@ -170,9 +170,18 @@ void RegistersWindow::onRefresh()
       }
    }
 
+   /* Highlight ISAR pointer in blue */
    i = g_ChannelF.c3850.isar / 8;
    j = g_ChannelF.c3850.isar - i * 8;
    m_ScratchpadTable->item(i, j)->setBackgroundColor(Qt::blue);
+
+   /* Highlight stack usage in pink */
+   i = g_ChannelF.c3850.scratchpad[59];
+   while (i > 40)
+   {
+      m_ScratchpadTable->item(i / 8, (i % 8) - 1)->setBackgroundColor(Qt::magenta);
+      i--;
+   }
 }
 
 #endif
