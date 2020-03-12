@@ -151,7 +151,7 @@ u8* isar(channelf_t *system)
       address = &system->c3850.scratchpad[opcode];
    }
    else if (opcode != 0x0F)
-      address = &system->c3850.scratchpad[ISAR];
+      address = &system->c3850.scratchpad[ISAR & 0x3F];
 
    if (opcode == 0x0D)
       ISAR = (ISAR & 0x38) | ((ISAR + 1) & 0x07);
