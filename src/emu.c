@@ -52,25 +52,19 @@ void print_machine(channelf_t *system)
 
 u16 read_16(void *src)
 {
-   u16 value;
-
-//#ifndef BIG_ENDIAN
-   value = ((u8*)src)[0] * 0x100 + ((u8*)src)[1];
-//#else
-//   memcpy(&value, src, 2);
-//#endif
-
-   return value;
+#ifndef BIG_ENDIAN
+   return __builtin_bswap16(*(u16*)src);
+#else
+   return *(u16*)src;
+#endif
 }
 
 void write_16(void *dest, u16 src)
 {
-//#ifndef BIG_ENDIAN
-   ((u8*)dest)[0] = ((src & 0xFF00) >> 8) & 0xFF;
-   ((u8*)dest)[1] = src & 0xFF;
-//#else
-//   memcpy(dest, &src, 2);
-//#endif
+#ifndef BIG_ENDIAN
+   src = __builtin_bswap16(src);
+#endif
+   memcpy(dest, &src, sizeof(src));
 }
 
 u8 get_status(channelf_t *system, const u8 flag)
