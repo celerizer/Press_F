@@ -15,15 +15,12 @@ static const i16 SOUND_FREQUENCIES[4] =
 };
 
 static i16   frequency_last;
-static u8    frequency_pushes;
-static u32   frequency_this_tick;
 static u16   last_tick;
 static float amplitude;
 static u32   time;
-static i16 frequencies[PF_SAMPLES];
+static i16   frequencies[PF_SAMPLES];
 
 i16 samples[PF_SAMPLES * 2];
-u32 samples_this_frame;
 
 void sound_empty()
 {

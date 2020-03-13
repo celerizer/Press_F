@@ -28,27 +28,25 @@
 #define PC0  system->pc0
 #define PC1  system->pc1
 
-static void (*operations[256])(channelf_t *system);
-
-void print_machine(channelf_t *system)
+opcode_t opcodes[256] =
 {
-   u8 op = system->rom[PC0];
-   printf("========\n");
-   printf("A   : %04X | ISAR: %04X | W   : %04X | \n", A, ISAR, W);
-   printf("PC0 : %04X | PC1 : %04X | DC0 : %04X | DC1 : %04X\n", PC0, PC1, DC0, DC1);
-   printf("PORT:");
-   for (u8 i = 0; i < 16; i++)
-      printf(" %02X", system->io[i]);
-   printf("\nOperation: %02X\n", op);
-   printf("--------\n");
-   for (u8 i = 0; i < 4; i++)
-   {
-      printf("| RAM [%02X]: ", i * 0x10);
-      for (u8 j = 0; j < 16; j++)
-         printf("%02X ", system->c3850.scratchpad[(i * 0x10 + j)]);
-      printf("|\n");
-   }
-}
+   { 1, "LR A, Ku",   "Loads register 12 (upper byte of K) into the accumulator." },
+   { 1, "LR A, Kl",   "Loads register 13 (lower byte of K) into the accumulator." },
+   { 1, "LR A, Qu",   "Loads register 14 (upper byte of Q) into the accumulator." },
+   { 1, "LR A, Ql",   "Loads register 15 (lower byte of Q) into the accumulator." },
+   { 1, "LR Ku, A",   "Loads the accumulator into register 12 (upper byte of K)." },
+   { 1, "LR Kl, A",   "Loads the accumulator into register 13 (lower byte of K)." },
+   { 1, "LR Qu, A",   "Loads the accumulator into register 14 (upper byte of Q)." },
+   { 1, "LR Ql, A",   "Loads the accumulator into register 15 (lower byte of Q)." },
+   { 1, "LR K, P",    "Loads the backup process counter into K (registers 12 and 13)." },
+   { 1, "LR P, K",    "Loads K (registers 12 and 13) into the backup process counter." },
+   { 1, "LR A, ISAR", "Loads the register referenced by the ISAR into the accumulator."},
+   { 1, "LR ISAR, A", "Loads the accumulator into the register referenced by the ISAR."}
+};
+
+#define F8_OP(a) void a(channelf_t *system)
+
+static void (*operations[256])(channelf_t *system);
 
 u16 read_16(void *src)
 {
@@ -746,10 +744,6 @@ u8 pressf_init(channelf_t *system)
 {
    u32 i = 0;
 
-   /* For testing BIOS */
-   for (i = 0x00; i < 0x40; i++)
-      system->c3850.scratchpad[i] = 0xFF;
-
    for (i = 0x00; i < 0x04; i++)
    {
       operations[0x00 + i] = lr_a_dpchr;
@@ -836,6 +830,16 @@ u8 pressf_init(channelf_t *system)
    operations[0xEF] = invalid_opcode;
    operations[0xFF] = invalid_opcode;
 
+   system->total_cycles = 30000;
+
+   return pressf_load_rom(system);
+}
+
+u8 pressf_load_rom(channelf_t *system)
+{
+   u32 i = 0;
+
+   free(system->functions);
    system->functions = calloc(ROM_CART_SIZE + ROM_BIOS_SIZE * 2, sizeof(void(*)(channelf_t*)));
    for (i = 0; i < ROM_CART_SIZE + ROM_BIOS_SIZE * 2; i++)
    {
@@ -846,7 +850,6 @@ u8 pressf_init(channelf_t *system)
       else
          printf("HLE function found: %04lX - %p\n", i, system->functions[i]);
    }
-   system->total_cycles = 30000;
 
    return TRUE;
 }
@@ -854,8 +857,10 @@ u8 pressf_init(channelf_t *system)
 /* TODO: Add SAFETY checks here */
 void pressf_step(channelf_t *system)
 {
-   system->functions[PC0](system);
-   PC0++;
+    u8 op = current_op(system);
+
+    operations[op](system);
+    PC0++;
 }
 
 u8 pressf_run(channelf_t *system)

@@ -1,3 +1,6 @@
+#ifndef PRESS_F_LIBRETRO_C
+#define PRESS_F_LIBRETRO_C
+
 #include <libretro.h>
 #include <streams/file_stream.h>
 #include <string/stdstring.h>
@@ -177,6 +180,7 @@ bool retro_load_game(const struct retro_game_info *info)
    if (info && !string_is_empty(info->path))
    {
       memcpy(&retro_channelf.rom[0x800], info->data, info->size);
+      pressf_load_rom(&retro_channelf);
       return true;//load_cartridge(&retro_channelf, info->data, info->size);
    }
    else
@@ -450,3 +454,5 @@ void retro_cheat_reset(void)
 void retro_cheat_set(unsigned a, bool b, const char *c)
 {
 }
+
+#endif

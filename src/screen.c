@@ -26,7 +26,7 @@ static const u16 PIXEL_COLOR_RGB565[4][4] =
 
 /* Returns the 2-bit palette index for a scanline (defined by bit 1 of columns 125 and 126) */
 /* TODO: This is a mess */
-#define GET_PALETTE(a, b) ((GET_PIXEL(a, ((b) & 0xFF80) + 125) & 2) >> 1) + (GET_PIXEL(a, ((b) & 0xFF80) + 126) & 2);
+#define GET_PALETTE(a, b) ((GET_PIXEL(a, ((b) & 0xFF80) + 125) & 2) >> 1) + (GET_PIXEL(a, ((b) & 0xFF80) + 126) & 2)
 
 u8 draw_frame_rgb565_full(u8 *vram, u16 *buffer)
 {
@@ -81,7 +81,7 @@ u8 draw_frame_rgb565(u8 *vram, u16 *buffer)
             continue;
          }
 
-         palette = GET_PALETTE(vram, y_pos * VRAM_WIDTH + x_pos);
+         palette = GET_PALETTE(vram, y_pos * VRAM_WIDTH);
 
          for (x_pos = 4; x_pos < 4 + SCREEN_WIDTH; x_pos++, buffer_pos++)
          {
@@ -130,8 +130,11 @@ void vram_write(u8 *vram, u8 x, u8 y, u8 value)
    case 3:
       mask = 0xFC;
       break;
+   /* Shouldn't ever happen, but here to silence a warning. */
+   default:
+      return;
    }
-   final = value << ((3 - (x & 3)) * 2);
+   final = (u8)(value << ((3 - (x & 3)) * 2));
 
    vram[byte] &= mask;
    vram[byte] |= final;
