@@ -145,6 +145,7 @@ void MainWindow::onEjectCart()
 {
     pressf_reset(&g_ChannelF);
     memset((void*)&(g_ChannelF.rom[ROM_CARTRIDGE]), 0, ROM_CART_SIZE);
+    pressf_load_rom(&g_ChannelF);
 }
 
 bool MainWindow::loadCartridge(QString Filename)
@@ -155,8 +156,9 @@ bool MainWindow::loadCartridge(QString Filename)
         return false;
     else
     {
-        Rom.read((char*)&g_ChannelF.rom[ROM_CARTRIDGE], ROM_CART_SIZE);
         pressf_reset(&g_ChannelF);
+        Rom.read((char*)&g_ChannelF.rom[ROM_CARTRIDGE], ROM_CART_SIZE);
+        pressf_load_rom(&g_ChannelF);
 
         /* Update the window title to something friendly looking
          * "/home/user/Bowling (1978) (Fairchild-21).chf" -> "Bowling" */
