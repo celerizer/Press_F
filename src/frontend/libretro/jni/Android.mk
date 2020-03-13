@@ -15,7 +15,7 @@ INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include \
 
 include $(BASE_DIR)/Makefile.common
 
-COREFLAGS := -DBIG_ENDIAN=0 -D__LIBRETRO__
+COREFLAGS := -D__LIBRETRO__
 
 include $(CLEAR_VARS)
 LOCAL_MODULE    := retro

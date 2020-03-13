@@ -15,8 +15,6 @@ ifneq (,$(findstring msvc2003,$(platform)))
 INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
 endif
 
-CFLAGS := -DBIG_ENDIAN=0
-
 SOURCES_C := \
    $(CORE_DIR)/emu.c \
    $(CORE_DIR)/file.c \

@@ -50,7 +50,7 @@ static void (*operations[256])(channelf_t *system);
 
 u16 read_16(void *src)
 {
-#ifndef BIG_ENDIAN
+#ifndef MSB_FIRST
    return __builtin_bswap16(*(u16*)src);
 #else
    return *(u16*)src;
@@ -59,7 +59,7 @@ u16 read_16(void *src)
 
 void write_16(void *dest, u16 src)
 {
-#ifndef BIG_ENDIAN
+#ifndef MSB_FIRST
    src = __builtin_bswap16(src);
 #endif
    memcpy(dest, &src, sizeof(src));
@@ -850,6 +850,7 @@ u8 pressf_load_rom(channelf_t *system)
       else
          printf("HLE function found: %04lX - %p\n", i, system->functions[i]);
    }
+   pressf_reset(system);
 
    return TRUE;
 }
