@@ -9,7 +9,10 @@
 #include "main.h"
 #include "registerswindow.h"
 
-#include "../../emu.h"
+extern "C"
+{
+   #include "../../emu.h"
+}
 
 RegisterLineEdit::RegisterLineEdit(const QString Name, void *Pointer, u8 Length = 1)
 {
