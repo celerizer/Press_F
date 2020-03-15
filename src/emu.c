@@ -1,5 +1,5 @@
-#ifndef PRESSF_EMU_C
-#define PRESSF_EMU_C
+#ifndef PRESS_F_EMU_C
+#define PRESS_F_EMU_C
 
 #include <stdio.h>
 #include <stdlib.h>

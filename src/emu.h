@@ -1,5 +1,5 @@
-#ifndef PRESSF_EMU_H
-#define PRESSF_EMU_H
+#ifndef PRESS_F_EMU_H
+#define PRESS_F_EMU_H
 
 #include "hw/channelf.h"
 

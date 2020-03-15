@@ -1,5 +1,5 @@
-#ifndef PRESSF_CHANNELF_H
-#define PRESSF_CHANNELF_H
+#ifndef PRESS_F_CHANNELF_H
+#define PRESS_F_CHANNELF_H
 
 #include "3850.h"
 

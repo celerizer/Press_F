@@ -1,5 +1,5 @@
-#ifndef PRESSF_SCREEN_C
-#define PRESSF_SCREEN_C
+#ifndef PRESS_F_SCREEN_C
+#define PRESS_F_SCREEN_C
 
 #include <string.h>
 

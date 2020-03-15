@@ -1,5 +1,5 @@
-#ifndef PRESSF_FILE_C
-#define PRESSF_FILE_C
+#ifndef PRESS_F_FILE_C
+#define PRESS_F_FILE_C
 
 #include <string.h>
 

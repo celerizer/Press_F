@@ -1,5 +1,5 @@
-#ifndef PRESSF_TYPES_H
-#define PRESSF_TYPES_H
+#ifndef PRESS_F_TYPES_H
+#define PRESS_F_TYPES_H
 
 #define i8  char
 #define u8  unsigned char
