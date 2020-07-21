@@ -3,7 +3,7 @@
 
 #include "input.h"
 
-u8 input[16];
+static u8 input[16] = {0xFF};
 
 u8 get_input(u8 port)
 {

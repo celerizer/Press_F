@@ -98,6 +98,52 @@ u8 draw_frame_rgb565(u8 *vram, u16 *buffer)
    return TRUE;
 }
 
+#ifdef ULTRA64
+u8 draw_frame_ultra(u8 *vram, u8 *buffer_a, u8 *buffer_b)
+{
+   if (!screen_dirty_any)
+      return FALSE;
+   else
+   {
+      u8 palette, pixel_data, x_pos, y_pos;
+      u16 buffer_pos = 0;
+
+      for (y_pos = 0; y_pos < VRAM_HEIGHT; y_pos++)
+      {
+         /* Don't waste time painting lines that haven't changed this frame */
+         if (!screen_dirty[y_pos])
+         {
+            buffer_pos += VRAM_WIDTH / 4;
+            continue;
+         }
+
+         palette = GET_PALETTE(vram, y_pos * VRAM_WIDTH) * 4;
+
+         for (x_pos = 0; x_pos < VRAM_WIDTH / 2; x_pos += 2, buffer_pos++)
+         {
+            pixel_data = GET_PIXEL(vram, y_pos * VRAM_WIDTH + x_pos);
+            buffer_a[buffer_pos] = ((palette + pixel_data) << 4) & 0xF0;
+            
+            pixel_data = GET_PIXEL(vram, y_pos * VRAM_WIDTH + x_pos + 1);
+            buffer_a[buffer_pos] += palette + pixel_data;
+
+            pixel_data = GET_PIXEL(vram, y_pos * VRAM_WIDTH + x_pos + 64);
+            buffer_b[buffer_pos] = ((palette + pixel_data) << 4) & 0xF0;
+            
+            pixel_data = GET_PIXEL(vram, y_pos * VRAM_WIDTH + x_pos + 65);
+            buffer_b[buffer_pos] += palette + pixel_data;
+         }
+
+         screen_dirty[y_pos] = FALSE;
+      }
+
+      screen_dirty_any = FALSE;
+   }
+
+   return TRUE;
+}
+#endif
+
 /* Force the emulator to redraw every pixel next frame, 
    helpful for state loads */
 void force_draw_frame()
