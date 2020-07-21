@@ -8,8 +8,17 @@
 #define i32 long
 #define u32 unsigned long
 
-#define TRUE  1
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
+
+#ifndef NULL
+#define NULL 0
+#endif
 
 /* 2-bit binary constants */
 #define B00 0x0

@@ -84,7 +84,7 @@ void add(channelf_t *system, u8 *dest, u8 src)
    set_status(system, STATUS_OVERFLOW, (!prev && *dest >> 7) ? TRUE : FALSE);
    set_status(system, STATUS_ZERO,     *dest == 0           ? TRUE : FALSE);
    set_status(system, STATUS_CARRY,    *dest < src          ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE); 
+   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE);
 }
 
 void add_bcd(channelf_t *system, u8 *augend, u8 addend)
@@ -184,7 +184,7 @@ void lr(u8 *dest, u8 *src)
    *dest = *src;
 }
 
-/* 
+/*
    00 - 03
    LR A, DPCHR
    Load a byte from either K or Q into the accumulator (see dpchr()).
@@ -194,7 +194,7 @@ F8_OP(lr_a_dpchr)
    lr(&A, dpchr(system));
 }
 
-/* 
+/*
    04 - 07
    LR DPCHR, A
    Load the accumulator into a byte from either K or Q (see dpchr()).
@@ -376,7 +376,7 @@ F8_OP(inc)
    add(system, &A, 1);
 }
 
-/* 
+/*
    20
    LI (Load Immediate)
    Set accumulator to a specified 8-bit value
@@ -423,7 +423,7 @@ F8_OP(ci)
    add(system, &immediate, ~A + 1);
 }
 
-/* 
+/*
    26
    IN (INput from port)
    Set accumulator to the value of an 8-bit port number
@@ -436,7 +436,7 @@ F8_OP(in)
    add(system, &A, 0);
 }
 
-/* 
+/*
    27
    OUT (OUTput to port)
    Set the value of an 8-bit port number to accumulator
@@ -628,15 +628,15 @@ F8_OP(bf)
       PC0++;
 }
 
-/* 
+/*
    A0 - AF
-   INS (INput from port (Short)) 
+   INS (INput from port (Short))
    Set accumulator to the value of a four-bit port number
 */
 F8_OP(ins)
 {
    u8 port = current_op(system) & 0x0F;
-   
+
    if (port == 0)
       system->io[0] = get_input(0);
    else if (system->io[1] == 0 && port == 1)
@@ -648,9 +648,9 @@ F8_OP(ins)
    add(system, &A, 0);
 }
 
-/* 
+/*
    B0 - BF
-   OUTS (OUTput to port (Short)) 
+   OUTS (OUTput to port (Short))
    Set the value of a four-bit port number to the accumulator
 */
 F8_OP(outs)
@@ -674,7 +674,7 @@ F8_OP(outs)
 }
 
 /*
-   C0 - CF 
+   C0 - CF
    AS (Add Source)
    Add a register to the accumulator.
 */
@@ -686,10 +686,10 @@ F8_OP(as)
       add(system, &A, *address);
 }
 
-/* 
-   D0 - DF 
+/*
+   D0 - DF
    ASD (Add Source Decimal)
-   Add a register to the accumulator as binary-coded decimal. 
+   Add a register to the accumulator as binary-coded decimal.
 */
 F8_OP(asd)
 {
@@ -699,7 +699,7 @@ F8_OP(asd)
       add_bcd(system, &A, *address);
 }
 
-/* 
+/*
    E0 - EF
    XS (eXclusive or Source)
    Logical XOR a register into the accumulator.
@@ -715,7 +715,7 @@ F8_OP(xs)
    }
 }
 
-/* 
+/*
    F0 - FF
    NS (aNd Source)
    Logical AND a register into the accumulator.
@@ -794,7 +794,7 @@ u8 pressf_init(channelf_t *system)
    operations[0x1D] = lr_w_j;
    operations[0x1E] = lr_j_w;
    operations[0x1F] = inc;
-   
+
    operations[0x20] = li;
    operations[0x21] = ni;
    operations[0x22] = oi;

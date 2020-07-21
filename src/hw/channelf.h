@@ -2,6 +2,7 @@
 #define PRESS_F_CHANNELF_H
 
 #include "3850.h"
+#include "f8_device.h"
 
 #define IO_PORTS      16
 
@@ -17,22 +18,29 @@
 /* 2 bits * 128 width * 64 height */
 #define VRAM_SIZE     0x0800
 
+/* Arbitrary limit for max number of devices hooked up to a system */
+#define F8_MAX_DEVICES 16
+
 typedef struct channelf_t
 {
    void    (**functions)();
    c3850_t c3850;
 
-   u16     dc0;
-   u16     dc1;
-   u16     pc0;
-   u16     pc1;
+   u16 dc0;
+   u16 dc1;
+   u16 pc0;
+   u16 pc1;
 
-   u8      io  [IO_PORTS];
-   u8      rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];
-   u8      vram[VRAM_SIZE];
+   u8 io  [IO_PORTS];
+   u8 rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];
+   u8 vram[VRAM_SIZE];
+   u8 dbus;
 
-   u32     cycles;
-   u32     total_cycles;
+   u32 cycles;
+   u32 total_cycles;
+
+   f8_device_t f8devices[F8_MAX_DEVICES];
+   u16         f8device_count;
 } channelf_t;
 
 #endif

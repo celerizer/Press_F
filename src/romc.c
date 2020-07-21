@@ -1,60 +1,41 @@
-/*
-   Copyright (c) 2020 Celerizer
-   ---
-   Permission is hereby granted, free of charge, to any person obtaining a
-   copy of this software and associated documentation files (the "Software"),
-   to deal in the Software without restriction, including without limitation
-   the rights to use, copy, modify, merge, publish, distribute, sublicense,
-   and/or sell copies of the Software, and to permit persons to whom the
-   Software is furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included
-   in all copies or substantial portions of the Software.
-   
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-   IN THE SOFTWARE.
-   ---
-   There's a lot of repeated code here to make sure these small functions get
-   properly "inlined" with C89.
-*/
-
 #ifndef PRESS_F_ROMC_C
 #define PRESS_F_ROMC_C
-
-#define ROMC_OP(a) void a(channelf_t* system)
 
 #define CYCLE_SHORT 4
 #define CYCLE_LONG  6
 
-u8 f8device_contains(f8device_t* device, u16 address)
+#include "romc.h"
+#include "types.h"
+
+#define INIT_DEVICES f8_device_t *device; u8 i;
+
+#define FOREACH_DEVICE for (i = 0; i < system->f8device_count; i++) { device = &system->f8devices[i];
+
+u8 f8device_contains(f8_device_t* device, u16 address)
 {
-   return address >= device->start && address <= device->end ? TRUE : FALSE;
+   return address >= device->start && address <= device->end;
+}
+
+u8* f8device_vptr(f8_device_t* device, u16 address)
+{
+   return &device->data[address & device->mask];
+}
+
+u8 f8device_write(f8_device_t *device, u16 address, u8 data)
+{
+   if (f8device_contains(device, address))
+   {
+      device->data[address & device->mask] = data;
+      return TRUE;
+   }
+
+   return FALSE;
 }
 
 /*
-   Returns a pointer to the F8 device's data at a given offset.
-   We need to assume f8device_contains would be true here.
-*/
-i8* f8device_virtual_ptr(f8device_t* device, u16 offset)
-{
-#ifdef PRESS_F_SAFETY
-   if (!device || !device->data)
-      return NULL;
-#endif
-   offset &= device->mask;
-
-   return device->data? &device->data[offset];
-}
-
-/* 
    ROMC 0 0 0 0 0 / 00 / S, L
    ---
-   Instruction Fetch. The device whose address space includes the contents of 
+   Instruction Fetch. The device whose address space includes the contents of
    the PC0 register must place on the data bus the op code addressed by PC0;
    then all devices increment the contents of PC0.
 
@@ -64,20 +45,13 @@ i8* f8device_virtual_ptr(f8device_t* device, u16 offset)
 */
 ROMC_OP(romc00)
 {
-   f8device_t *device;
-   i8 *return_value = NULL;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
-         system->dbus = *f8device_virtual_ptr(device->pc0)
+         system->dbus = *f8device_vptr(device, device->pc0);
       device->pc0++;
    }
-   if (return_value)
-      system->dbus = *return_value;
 
    system->cycles -= CYCLE_SHORT + CYCLE_LONG;
 }
@@ -87,34 +61,30 @@ ROMC_OP(romc00)
    ---
    The device whose address space includes the contents of the PC0 register
    must place on the data bus the contents of the memory location addressed
-   by PC0; then all devices add the 8-bit value on the data bus, as a 
+   by PC0; then all devices add the 8-bit value on the data bus, as a
    signed binary number, to PC0.
 
-   NOTE: We could break once found to do this quicker, but we want to emulate
-      proper race conditions eventually.
+   NOTES: We could break once found to do this quicker, but we want to emulate
+      proper race conditions eventually. However, I don't know how out-of-sync
+      devices actually behave.
 */
 ROMC_OP(romc01)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
-         system->dbus = *f8device_virtual_ptr(device->pc0);
+         system->dbus = *f8device_vptr(device, device->pc0);
    }
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+
+   FOREACH_DEVICE
       device->pc0 += system->dbus;
    }
 
    system->cycles -= CYCLE_LONG;
 }
 
-/* 
+/*
    ROMC 0 0 0 1 0 / 02 / L
    ---
    The device whose DC0 addresses a memory word within the address space of
@@ -123,20 +93,13 @@ ROMC_OP(romc01)
 */
 ROMC_OP(romc02)
 {
-   f8device_t *device;
-   i8 *return_value = NULL;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->dc0))
-         return_value = f8device_virtual_ptr(device->dc0)
+         system->dbus = *f8device_vptr(device, device->dc0);
       device->dc0++;
    }
-   if (return_value)
-      system->dbus = *return_value;
 
    system->cycles -= CYCLE_LONG;
 }
@@ -145,9 +108,9 @@ ROMC_OP(romc02)
    ROMC 0 0 0 1 1 / 03 / L, S
    ---
    Similar to 00, except that it is used for Immediate Operand fetches (using
-   PC0) instead of instrcution fetches.
+   PC0) instead of instruction fetches.
 
-   NOTES: The documentation calls it similar and LONG/SHORT is flipped, is 
+   NOTES: The documentation calls it similar and LONG/SHORT is flipped, is
       there any functional difference?
 */
 ROMC_OP(romc03)
@@ -162,12 +125,9 @@ ROMC_OP(romc03)
 */
 ROMC_OP(romc04)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc0 = device->pc1;
    }
 
@@ -182,15 +142,10 @@ ROMC_OP(romc04)
 */
 ROMC_OP(romc05)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
-      if (f8device_contains(device, device->dc0))
-         *f8device_virtual_ptr(device, device->dc0) = system->dbus;
+   FOREACH_DEVICE
+      f8device_write(device, device->dc0, system->dbus);
       device->dc0++;
    }
 
@@ -203,12 +158,12 @@ ROMC_OP(romc05)
    Place the high order byte of DC0 on the data bus.
 
    NOTE: Because timing here won't be accurate anyway, and all devices should
-      write the same value, we only worry about the first F8 device (probably 
+      write the same value, we only worry about the first F8 device (probably
       the 3850).
 */
 ROMC_OP(romc06)
 {
-   system->dbus = system->devices[0].dc0 & 0xFF00;
+   system->dbus = (system->f8devices[0].dc0 & 0xFF00) >> 8;
 
    system->cycles -= CYCLE_LONG;
 }
@@ -222,7 +177,7 @@ ROMC_OP(romc06)
 */
 ROMC_OP(romc07)
 {
-   system->dbus = system->devices[0].pc1 & 0xFF00;
+   system->dbus = (system->f8devices[0].pc1 & 0xFF00) >> 8;
 
    system->cycles -= CYCLE_LONG;
 }
@@ -239,16 +194,13 @@ ROMC_OP(romc07)
 */
 ROMC_OP(romc08)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
    system->dbus = 0;
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
 
+   FOREACH_DEVICE
       device->pc1 = device->pc0;
-      device->pc0 = system->dbus * 0x100 + system->dbus;
+      device->pc0 = ((u16)(system->dbus << 8) | system->dbus);
    }
 
    system->cycles -= CYCLE_LONG;
@@ -257,18 +209,14 @@ ROMC_OP(romc08)
 /*
    ROMC 0 1 0 0 1 / 09 / L
    ---
-   The device whose address space includes the contents of the DC0 register 
+   The device whose address space includes the contents of the DC0 register
    must place the low order byte of DC0 onto the data bus.
 */
 ROMC_OP(romc09)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->dc0))
          system->dbus = device->dc0 & 0xFF;
    }
@@ -284,12 +232,9 @@ ROMC_OP(romc09)
 */
 ROMC_OP(romc0a)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->dc0 += system->dbus;
    }
 
@@ -304,14 +249,9 @@ ROMC_OP(romc0a)
 */
 ROMC_OP(romc0b)
 {
-   f8device_t *device;
-   i8 *return_value = NULL;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc1))
          system->dbus = device->pc1 & 0xFF;
    }
@@ -332,19 +272,13 @@ ROMC_OP(romc0b)
 */
 ROMC_OP(romc0c)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
-         system->dbus = *f8device_virtual_ptr(device->pc0);
+         system->dbus = *f8device_vptr(device, device->pc0);
    }
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
@@ -359,12 +293,9 @@ ROMC_OP(romc0c)
 */
 ROMC_OP(romc0d)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc1 = device->pc0 + 1;
    }
 
@@ -380,20 +311,15 @@ ROMC_OP(romc0d)
 */
 ROMC_OP(romc0e)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
-         system->dbus = *f8device_virtual_ptr(device->pc0);
+         system->dbus = *f8device_vptr(device, device->pc0);
    }
-   for (i = 0; i < system->f8device_count; i++)
-   {
+   FOREACH_DEVICE
       device = &system->f8devices[i];
-      device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
+      device->dc0 = (device->dc0 & 0xFF00) | system->dbus;
    }
 
    system->cycles -= CYCLE_LONG;
@@ -411,13 +337,9 @@ ROMC_OP(romc0e)
 */
 ROMC_OP(romc0f)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       device->pc1 = device->pc0;
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
@@ -446,20 +368,14 @@ ROMC_OP(romc10)
 */
 ROMC_OP(romc11)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
-         system->dbus = *f8device_virtual_ptr(device->pc0);
+         system->dbus = *f8device_vptr(device, device->pc0);
    }
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-      device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
+   FOREACH_DEVICE
+      device->dc0 = (u16)((device->dc0 & 0x00FF) | (system->dbus << 8));
    }
 
    system->cycles -= CYCLE_LONG;
@@ -468,18 +384,14 @@ ROMC_OP(romc11)
 /*
    ROMC 1 0 0 1 0 / 12 / L
    ---
-   All devices copy the contents of PC0 into PC1. All devices then move the 
+   All devices copy the contents of PC0 into PC1. All devices then move the
    contents of the data bus into the low order byte of PC0.
 */
 ROMC_OP(romc12)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
-
+   FOREACH_DEVICE
       device->pc1 = device->pc0;
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
@@ -504,12 +416,9 @@ ROMC_OP(romc13)
 */
 ROMC_OP(romc14)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc0 = (device->pc0 & 0x00FF) + system->dbus * 0x100;
    }
 
@@ -523,12 +432,9 @@ ROMC_OP(romc14)
 */
 ROMC_OP(romc15)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc1 = (device->pc1 & 0x00FF) + system->dbus * 0x100;
    }
 
@@ -542,12 +448,9 @@ ROMC_OP(romc15)
 */
 ROMC_OP(romc16)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
    }
 
@@ -561,12 +464,9 @@ ROMC_OP(romc16)
 */
 ROMC_OP(romc17)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
@@ -580,12 +480,9 @@ ROMC_OP(romc17)
 */
 ROMC_OP(romc18)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->pc1 = (device->pc1 & 0xFF00) + system->dbus;
    }
 
@@ -599,12 +496,9 @@ ROMC_OP(romc18)
 */
 ROMC_OP(romc19)
 {
-   f8device_t *device;
-   u8 i;
+   INIT_DEVICES
 
-   for (i = 0; i < system->f8device_count; i++)
-   {
-      device = &system->f8devices[i];
+   FOREACH_DEVICE
       device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
    }
 

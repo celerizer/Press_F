@@ -24,7 +24,9 @@ SOURCES += \
     src/frontend/qt/mainwindow.cpp \
     src/frontend/qt/registerswindow.cpp \
     src/hle.c \
+    src/hw/2102.c \
     src/input.c \
+    src/romc.c \
     src/screen.c \
     src/sound.c \
     src/wave.c
@@ -39,7 +41,12 @@ HEADERS += \
     src/frontend/qt/mainwindow.h \
     src/frontend/qt/registerswindow.h \
     src/hle.h \
+    src/hw/2102.h \
+    src/hw/3850.h \
+    src/hw/channelf.h \
+    src/hw/f8_device.h \
     src/input.h \
+    src/romc.h \
     src/screen.h \
     src/sound.h \
     src/types.h \

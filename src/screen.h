@@ -11,6 +11,7 @@
 void draw_frame_argb8888   (u8 *vram, u32 *buffer);
 u8   draw_frame_rgb565     (u8 *vram, u16 *buffer);
 u8   draw_frame_rgb565_full(u8 *vram, u16 *buffer);
+
 void force_draw_frame      ();
 void vram_write            (u8 *vram, u8 x, u8 y, u8 value);
 
