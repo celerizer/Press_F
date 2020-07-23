@@ -92,7 +92,7 @@ RegistersWindow::RegistersWindow()
     m_CommandsList->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     m_CommandsList->setRowCount(sizeof(g_ChannelF.rom));
     m_CommandsList->setColumnCount(2);
-    connect(m_CommandsList, SIGNAL(cellClicked(int, int)), this, SLOT(onClickCommand(int, int)));
+    connect(m_CommandsList, SIGNAL(currentCellChanged(int, int, int, int)), this, SLOT(onClickCommand(int, int, int, int)));
     for (int i = 0; i < sizeof(g_ChannelF.rom); i++)
     {
        snprintf(temp_string, sizeof(temp_string), "%04X", i);
@@ -155,13 +155,14 @@ RegistersWindow::RegistersWindow()
     connect(m_Timer, SIGNAL(timeout()), this, SLOT(onRefresh()));
 }
 
-void RegistersWindow::onClickCommand(int Row, int Column)
+void RegistersWindow::onClickCommand(int Row, int Column, int PreRow, int PreColumn)
 {
    m_CommandDescription->setText(opcodes[g_ChannelF.rom[Row]].description);
 }
 
 void RegistersWindow::onRefresh()
 {
+   QTableWidgetItem *item;
    u8 i, j;
 
    for (i = 0; i < 8; i++)
@@ -182,8 +183,15 @@ void RegistersWindow::onRefresh()
    i = g_ChannelF.c3850.scratchpad[59];
    while (i > 40)
    {
-      m_ScratchpadTable->item(i / 8, (i % 8) - 1)->setBackgroundColor(Qt::magenta);
-      i--;
+      item = m_ScratchpadTable->item(i / 8, (i % 8) - 1);
+
+      if (item)
+      {
+         item->setBackgroundColor(Qt::magenta);
+         i--;
+      }
+      else
+         break;
    }
 }
 

@@ -54,7 +54,7 @@ private:
     QTimer           *m_Timer;
 
 private slots:
-    void onClickCommand(int Row, int Column);
+    void onClickCommand(int Row, int Column, int PreRow, int PreColumn);
     void onRefresh     ();
 };
 
