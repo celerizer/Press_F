@@ -30,6 +30,7 @@ void sound_empty()
 
 void sound_write()
 {
+#ifdef PF_AUDIO_ENABLE
    u16 i;
 
    /* Fill any unwritten samples with the last known tone */
@@ -61,10 +62,12 @@ void sound_write()
       }
    }
    last_tick = 0;
+#endif
 }
 
 void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
 {
+#ifdef PF_AUDIO_ENABLE
    u16 current_tick = PF_SAMPLES * ((float)current_cycles / (float)total_cycles);
 
    if (current_tick != last_tick)
@@ -76,6 +79,7 @@ void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
    }
    last_tick = current_tick;
    frequency_last = SOUND_FREQUENCIES[frequency];
+#endif
 }
 
 #endif

@@ -3,11 +3,45 @@
 
 #include "types.h"
 
-/* Compile-time options */
+/*
+================================================================================
+   Compile-time options
+================================================================================
+*/
 
-/* Constantly checks the validity of pointers in main emulation loop */
-/* Causes slowdowns and the program should be stable to the point where this isn't needed */
+/*
+   Constantly checks the validity of pointers in main emulation loop.
+   Could be a performance hit and the program should be stable to the point
+   where this isn't needed.
+*/
+#ifndef PRESS_F_SAFETY
 #define PRESS_F_SAFETY FALSE
+#endif
+
+/*
+   Enable audio processing.
+*/
+#ifndef PF_AUDIO_ENABLE
+#define PF_AUDIO_ENABLE TRUE
+#endif
+
+/*
+   Sampling frequency for sound.
+   Turn this down if audio causes slowdowns, but keep it divisible by 60.
+*/
+#ifndef PF_FREQUENCY
+#define PF_FREQUENCY 44100
+#endif
+
+/*
+   Minimum / maximum sound volume. Needs to be a signed short.
+*/
+#ifndef PF_MIN_AMPLITUDE
+#define PF_MIN_AMPLITUDE 0x0000
+#endif
+#ifndef PF_MAX_AMPLITUDE
+#define PF_MAX_AMPLITUDE 0x7FFF
+#endif
 
 /* Runtime options */
 typedef struct pf_settings_t
