@@ -575,11 +575,11 @@ static const font_t font_skinny =
       ______
    },
    {
+      __1_1_,
       __111_,
-      _1_1_1,
-      _1_1_1,
-      _1___1,
-      _1___1
+      __111_,
+      __1_1_,
+      __1_1_
    },
    {
       __1_1_,
@@ -699,6 +699,17 @@ void font_load(channelf_t *system, const u8 id)
          font = &font_skinny;
       }
       memcpy(&system->rom[0x767], font, sizeof(*font));
+
+      /* 
+         The on-board games use the '1' character to form the vertical lines
+         that make up the playfield. This edit causes the game to instead use
+         the graphic for a straight paddle, which is identical.
+
+         This lets the correct lines get drawn even if the '1' character is
+         edited in the chosen font.
+      */
+      system->rom[0x01FD] = PF_COLOR_RED | PF_FONT_LINE_180;
+      system->rom[0x0453] = PF_COLOR_RED | PF_FONT_LINE_180;
    }
 }
 
