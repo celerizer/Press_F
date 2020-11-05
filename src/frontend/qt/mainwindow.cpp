@@ -16,7 +16,6 @@ extern "C"
 #include <string>
 
 #include <QApplication>
-#include <QAudioBuffer>
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QGridLayout>
@@ -73,6 +72,7 @@ MainWindow::MainWindow()
     Format.setCodec("audio/pcm");
 
     setAcceptDrops(true);
+    resize(92 * 4, 58 * 4);
 
     /* Init gamepad */
     m_Gamepads[0].setDeviceId(0);
@@ -80,11 +80,7 @@ MainWindow::MainWindow()
 
     /* Init audio */
     m_AudioOutput = new QAudioOutput(Format, this);
-
-    m_AudioBuffer = new QBuffer(this);
-    m_AudioBuffer->setData(QByteArray::fromRawData((char*)samples, sizeof(samples)));
-    m_AudioBuffer->open(QIODevice::ReadOnly);
-    m_AudioOutput->start(m_AudioBuffer);
+    m_AudioDevice = m_AudioOutput->start();
 
     pressf_init(&g_ChannelF);
 
@@ -100,7 +96,6 @@ MainWindow::MainWindow()
     Layout->addWidget(m_Framebuffer, 1, 0);
     Layout->setMargin(0);
     Layout->setSpacing(0);
-    //Layout->setAlignment(m_Framebuffer, Qt::AlignHCenter);
     setLayout(Layout);
 }
 
@@ -138,7 +133,7 @@ void MainWindow::onFrame()
 
     /* Audio */
     sound_write();
-    m_AudioBuffer->reset();
+    m_AudioDevice->write((const char*)samples, PF_SAMPLES * 4);
 }
 
 void MainWindow::onEjectCart()

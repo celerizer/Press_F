@@ -24,8 +24,8 @@ private:
     QPfFramebuffer *m_Framebuffer;
 
     /* Audio stuff (TODO: Move to own file/class) */
-    QBuffer      *m_AudioBuffer;
     QAudioOutput *m_AudioOutput;
+    QIODevice    *m_AudioDevice;
 
     bool loadCartridge(QString Filename);
 

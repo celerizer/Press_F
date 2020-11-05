@@ -4,8 +4,8 @@
 #include "config.h"
 #include "types.h"
 
-#define PF_DECAY   (1.0 - 77.0 / PF_FREQUENCY)
-#define PF_PERIOD  1.0 / PF_FREQUENCY
+#define PF_DECAY   (1.0f - 77.0f / PF_FREQUENCY)
+#define PF_PERIOD  1.0f / PF_FREQUENCY
 #define PF_SAMPLES PF_FREQUENCY / 60
 
 void sound_empty();
