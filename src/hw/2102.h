@@ -10,7 +10,6 @@
 
 typedef struct f2102_t
 {
-   u8  data[F2102_SIZE];
    u16 selected_address;
    u8  chip_select;
 } f2102_t;

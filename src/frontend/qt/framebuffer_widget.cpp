@@ -8,50 +8,55 @@
 
 extern "C"
 {
-   #include "../../screen.h"
+  #include "../../screen.h"
 }
 
 QPfFramebuffer::QPfFramebuffer(QWidget *parent) : QWidget(parent)
 {
-   m_Rect = QRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-   m_Texture = QImage(SCREEN_WIDTH, SCREEN_HEIGHT, QImage::Format_RGB16);
+  m_Rect = QRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  m_Texture = QImage(SCREEN_WIDTH, SCREEN_HEIGHT, QImage::Format_RGB16);
 }
 
 QSize QPfFramebuffer::getSize(void)
 {
-   return m_Rect.size();
+  return m_Rect.size();
 }
 
 QSize QPfFramebuffer::minimumSizeHint(void) const
 {
-   return QSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+  return QSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void QPfFramebuffer::paintEvent(QPaintEvent *event)
 {
-   QPainter painter(this);
+  QPainter painter(this);
 
-   draw_frame_rgb565(g_ChannelF.vram, (u16*)m_Texture.bits());
-   painter.drawImage(m_Rect, m_Texture);
+  Q_UNUSED(event)
+  draw_frame_rgb565(g_ChannelF.vram, reinterpret_cast<u16*>(m_Texture.bits()));
+  painter.drawImage(m_Rect, m_Texture);
 }
 
 bool QPfFramebuffer::setScale(const QSize& parent)
 {
-   u8 x = parent.width()  / SCREEN_WIDTH;
-   u8 y = parent.height() / SCREEN_HEIGHT;
-   u8 final_scale = x > y ? y : x;
+  auto x = static_cast<u8>(parent.width()  / SCREEN_WIDTH);
+  auto y = static_cast<u8>(parent.height() / SCREEN_HEIGHT);
+  auto final_scale = x > y ? y : x;
 
-   if (m_Scale != final_scale)
-   {
-      m_Scale = final_scale;
-      m_Rect.setSize(QSize(SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
-      force_draw_frame();
-      update();
+  /* Resize rect if needed */
+  if (m_Scale != final_scale)
+  {
+    m_Scale = final_scale;
+    m_Rect.setSize(QSize(
+      SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
+  }
 
-      return true;
-   }
+  /* Center horizontally */
+  m_Rect.moveLeft((parent.width() - m_Rect.width()) / 2);
 
-   return false;
+  force_draw_frame();
+  update();
+
+  return true;
 }
 
 #endif

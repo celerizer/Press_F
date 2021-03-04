@@ -1,4 +1,4 @@
-QT       += core gui multimedia gamepad
+QT += core gui multimedia gamepad
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -23,6 +23,7 @@ SOURCES += \
     src/frontend/qt/main.cpp \
     src/frontend/qt/mainwindow.cpp \
     src/frontend/qt/registerswindow.cpp \
+    src/frontend/qt/settings.cpp \
     src/hle.c \
     src/hw/2102.c \
     src/input.c \
@@ -40,6 +41,7 @@ HEADERS += \
     src/frontend/qt/main.h \
     src/frontend/qt/mainwindow.h \
     src/frontend/qt/registerswindow.h \
+    src/frontend/qt/settings.h \
     src/hle.h \
     src/hw/2102.h \
     src/hw/3850.h \

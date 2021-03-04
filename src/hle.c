@@ -124,7 +124,7 @@ HLE(drawchar)
 
 /*
    drawchar_sys
-   0679 - 67B
+   0679 - 067B
    ---
    Performs drawchar with the system's internal font.
    ---
@@ -143,18 +143,18 @@ void* hle_get_func_from_addr(u16 address)
 {
    switch (address)
    {
-   case 0x0000:
-      return reset;
-   case 0x0001:
-      return init;
+   //case 0x0000:
+   //   return reset;
+   //case 0x0001:
+   //   return init;
    /*case 0x001A:
       return no_cart_init;
    case 0x00D0:
       return clear_screen;*/
-   case 0x0107:
-      return push_k;
-   case 0x011E:
-      return pop_k;
+   //case 0x0107:
+   //   return push_k;
+   //case 0x011E:
+   //   return pop_k;
    /*case 0x0679:
       return drawchar_sys;
    case 0x067C:

@@ -4,12 +4,18 @@
 #define CYCLE_SHORT 4
 #define CYCLE_LONG  6
 
+#include "config.h"
 #include "romc.h"
 #include "types.h"
 
-#define INIT_DEVICES f8_device_t *device; u8 i;
+#define INIT_DEVICES \
+   f8_device_t *device; \
+   u8 i;
 
-#define FOREACH_DEVICE for (i = 0; i < system->f8device_count; i++) { device = &system->f8devices[i];
+#define FOREACH_DEVICE \
+   for (i = 0; i < system->f8device_count; i++) \
+   { \
+      device = &system->f8devices[i];
 
 u8 f8device_contains(f8_device_t* device, u16 address)
 {
@@ -47,13 +53,26 @@ ROMC_OP(romc00)
 {
    INIT_DEVICES
 
+#if PF_ROMC_REDUNDANCY == FALSE
+   FOREACH_DEVICE
+      if (f8device_contains(device, device->pc0))
+      {
+         system->dbus = *f8device_vptr(device, device->pc0);
+         break;
+      }
+   }
+   FOREACH_DEVICE
+      device->pc0++;
+   }
+#else
    FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
          system->dbus = *f8device_vptr(device, device->pc0);
       device->pc0++;
    }
+#endif
 
-   system->cycles -= CYCLE_SHORT + CYCLE_LONG;
+   system->cycles += CYCLE_SHORT + CYCLE_LONG;
 }
 
 /*
@@ -81,7 +100,7 @@ ROMC_OP(romc01)
       device->pc0 += system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -101,7 +120,7 @@ ROMC_OP(romc02)
       device->dc0++;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -131,7 +150,7 @@ ROMC_OP(romc04)
       device->pc0 = device->pc1;
    }
 
-   system->cycles -= CYCLE_SHORT;
+   system->cycles += CYCLE_SHORT;
 }
 
 /*
@@ -149,7 +168,7 @@ ROMC_OP(romc05)
       device->dc0++;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -165,7 +184,7 @@ ROMC_OP(romc06)
 {
    system->dbus = (system->f8devices[0].dc0 & 0xFF00) >> 8;
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -179,7 +198,7 @@ ROMC_OP(romc07)
 {
    system->dbus = (system->f8devices[0].pc1 & 0xFF00) >> 8;
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -203,7 +222,7 @@ ROMC_OP(romc08)
       device->pc0 = ((u16)(system->dbus << 8) | system->dbus);
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -221,7 +240,7 @@ ROMC_OP(romc09)
          system->dbus = device->dc0 & 0xFF;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -238,7 +257,7 @@ ROMC_OP(romc0a)
       device->dc0 += system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -256,7 +275,7 @@ ROMC_OP(romc0b)
          system->dbus = device->pc1 & 0xFF;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -282,7 +301,7 @@ ROMC_OP(romc0c)
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -299,7 +318,7 @@ ROMC_OP(romc0d)
       device->pc1 = device->pc0 + 1;
    }
 
-   system->cycles -= CYCLE_SHORT;
+   system->cycles += CYCLE_SHORT;
 }
 
 /*
@@ -322,7 +341,7 @@ ROMC_OP(romc0e)
       device->dc0 = (device->dc0 & 0xFF00) | system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -344,7 +363,7 @@ ROMC_OP(romc0f)
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -356,7 +375,7 @@ ROMC_OP(romc0f)
 */
 ROMC_OP(romc10)
 {
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -378,7 +397,7 @@ ROMC_OP(romc11)
       device->dc0 = (u16)((device->dc0 & 0x00FF) | (system->dbus << 8));
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -396,7 +415,7 @@ ROMC_OP(romc12)
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -406,7 +425,7 @@ ROMC_OP(romc12)
 */
 ROMC_OP(romc13)
 {
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -422,7 +441,7 @@ ROMC_OP(romc14)
       device->pc0 = (device->pc0 & 0x00FF) + system->dbus * 0x100;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -438,7 +457,7 @@ ROMC_OP(romc15)
       device->pc1 = (device->pc1 & 0x00FF) + system->dbus * 0x100;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -454,7 +473,7 @@ ROMC_OP(romc16)
       device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -470,7 +489,7 @@ ROMC_OP(romc17)
       device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -486,7 +505,7 @@ ROMC_OP(romc18)
       device->pc1 = (device->pc1 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
 }
 
 /*
@@ -502,7 +521,109 @@ ROMC_OP(romc19)
       device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
    }
 
-   system->cycles -= CYCLE_LONG;
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 0 1 0 / 1A / L
+   ---
+   During the prior cycle, an I/O port timer or interrupt controller register
+   was addressed; the device conatining the addressed port must move the
+   current contents of the data bus into the addressed port.
+*/
+ROMC_OP(romc1a)
+{
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 0 1 1 / 1B / L
+   ---
+   During the prior cycle, the data bus specified the address of an I/O port.
+   The device containing the addressed I/O port must place the contents of
+   the I/O port on the data bus.
+   (Note that the contents of timer and interrupt control registers cannot be
+   read back onto the data bus.)
+*/
+ROMC_OP(romc1b)
+{
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 1 0 0 / 1C / L or S
+   ---
+   None.
+*/
+ROMC_OP(romc1c)
+{
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 1 0 1 / 1D / S
+   ---
+   Devices with DC0 and DC1 registers must switch registers. Devices without a
+   DC1 register perform no operation.
+*/
+ROMC_OP(romc1d)
+{
+   INIT_DEVICES
+   u16 temp;
+
+   FOREACH_DEVICE
+      temp = device->dc0;
+      device->dc0 = device->dc1;
+      device->dc0 = temp;
+   }
+
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 1 1 0 / 1E / L
+   ---
+   The device whose address space includes the contents of PC0 must place the
+   low order byte of PC0 onto the data bus.
+*/
+ROMC_OP(romc1e)
+{
+   INIT_DEVICES
+
+   FOREACH_DEVICE
+      if (f8device_contains(device, device->pc0))
+      {
+         system->dbus = device->pc0 & 0xFF;
+#if PF_ROMC_REDUNDANCY == FALSE
+         break;
+#endif
+      }
+   }
+
+   system->cycles += CYCLE_LONG;
+}
+
+/*
+   ROMC 1 1 1 1 0 / 1F / L
+   ---
+   The device whose address space includes the contents of PC0 must place the
+   high order byte of PC0 onto the data bus.
+*/
+ROMC_OP(romc1f)
+{
+   INIT_DEVICES
+
+   FOREACH_DEVICE
+      if (f8device_contains(device, device->pc0))
+      {
+         system->dbus = (device->pc0 & 0xFF00) >> 8;
+#if PF_ROMC_REDUNDANCY == FALSE
+         break;
+#endif
+      }
+   }
+
+   system->cycles += CYCLE_LONG;
 }
 
 #endif

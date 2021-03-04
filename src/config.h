@@ -26,6 +26,13 @@
 #endif
 
 /*
+   Enable the debugger.
+*/
+#ifndef PF_DEBUGGER
+#define PF_DEBUGGER TRUE
+#endif
+
+/*
    Sampling frequency for sound.
    Turn this down if audio causes slowdowns, but keep it divisible by 60.
 */
@@ -41,6 +48,15 @@
 #endif
 #ifndef PF_MAX_AMPLITUDE
 #define PF_MAX_AMPLITUDE 0x7FFF
+#endif
+
+/*
+   Controls whether or not to break possibly redundant loops in ROMC functions.
+   While allowing this should be more accurate, the only way it should
+   change behavior is on miswired or otherwise damaged hardware.
+*/
+#ifndef PF_ROMC_REDUNDANCY
+#define PF_ROMC_REDUNDANCY FALSE
 #endif
 
 /* Runtime options */

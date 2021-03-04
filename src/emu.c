@@ -8,6 +8,7 @@
 #include "emu.h"
 #include "hle.h"
 #include "input.h"
+#include "romc.h"
 #include "screen.h"
 #include "sound.h"
 
@@ -30,18 +31,28 @@
 
 opcode_t opcodes[256] =
 {
-   { 1, "LR A, Ku",   "Loads register 12 (upper byte of K) into the accumulator." },
-   { 1, "LR A, Kl",   "Loads register 13 (lower byte of K) into the accumulator." },
-   { 1, "LR A, Qu",   "Loads register 14 (upper byte of Q) into the accumulator." },
-   { 1, "LR A, Ql",   "Loads register 15 (lower byte of Q) into the accumulator." },
-   { 1, "LR Ku, A",   "Loads the accumulator into register 12 (upper byte of K)." },
-   { 1, "LR Kl, A",   "Loads the accumulator into register 13 (lower byte of K)." },
-   { 1, "LR Qu, A",   "Loads the accumulator into register 14 (upper byte of Q)." },
-   { 1, "LR Ql, A",   "Loads the accumulator into register 15 (lower byte of Q)." },
-   { 1, "LR K, P",    "Loads the backup process counter into K (registers 12 and 13)." },
-   { 1, "LR P, K",    "Loads K (registers 12 and 13) into the backup process counter." },
-   { 1, "LR A, ISAR", "Loads the register referenced by the ISAR into the accumulator."},
-   { 1, "LR ISAR, A", "Loads the accumulator into the register referenced by the ISAR."}
+  { 1, "LR A, Ku",   "Loads register 12 (upper byte of K) into the accumulator." },
+  { 1, "LR A, Kl",   "Loads register 13 (lower byte of K) into the accumulator." },
+  { 1, "LR A, Qu",   "Loads register 14 (upper byte of Q) into the accumulator." },
+  { 1, "LR A, Ql",   "Loads register 15 (lower byte of Q) into the accumulator." },
+  { 1, "LR Ku, A",   "Loads the accumulator into register 12 (upper byte of K)." },
+  { 1, "LR Kl, A",   "Loads the accumulator into register 13 (lower byte of K)." },
+  { 1, "LR Qu, A",   "Loads the accumulator into register 14 (upper byte of Q)." },
+  { 1, "LR Ql, A",   "Loads the accumulator into register 15 (lower byte of Q)." },
+  { 1, "LR K, PC1",  "Loads PC1 into K (registers 12 and 13)." },
+  { 1, "LR PC1, K",  "Loads K (registers 12 and 13) into PC1." },
+  { 1, "LR A, ISAR", "Loads the register referenced by the ISAR into the accumulator."},
+  { 1, "LR ISAR, A", "Loads the accumulator into the register referenced by the ISAR."},
+  { 1, "PK",         "Loads PC0 into PC1, then loads K (registers 12 and 13) into PC0."},
+  { 1, "LR PC0, Q",  "Loads Q (registers 14 and 15) into PC0."},
+  { 1, "LR Q, DC0",  "Loads DC0 into Q (registers 14 and 15)."},
+  { 1, "LR DC0, Q",  "Loads Q (registers 14 and 15) into DC0."},
+  { 1, "LR DC0, H",  "Loads H (registers 10 and 11) into DC0."},
+  { 1, "LR H, DC0",  "Loads DC0 into H (registers 10 and 11)."},
+  { 1, "SR 1",       "Shifts the accumulator right by one bit."},
+  { 1, "SL 1",       "Shifts the accumulator left by one bit."},
+  { 1, "SR 4",       "Shifts the accumulator right by four bits."},
+  { 1, "SL 4",       "Shifts the accumulator left by four bits."},
 };
 
 #define F8_OP(a) void a(channelf_t *system)
@@ -62,34 +73,36 @@ void write_16(void *dest, u16 src)
 #ifndef MSB_FIRST
    src = __builtin_bswap16(src);
 #endif
-   memcpy(dest, &src, sizeof(src));
+   memcpy(dest, &src, 2);
 }
 
-u8 get_status(channelf_t *system, const u8 flag)
+u32 get_status(channelf_t *system, const u32 flag)
 {
    return (W & flag) != 0;
 }
 
-void set_status(channelf_t *system, const u8 flag, u8 enable)
+void set_status(channelf_t *system, const u32 flag, u32 enable)
 {
    W = enable ? W | flag : W & ~flag;
 }
 
-void add(channelf_t *system, u8 *dest, u8 src)
+void add(channelf_t *system, u8 *dest, u32 src)
 {
    /* TODO: Make this less awful */
-   u8 prev = (*dest >> 7) ? TRUE : FALSE;
+   u32 prev = (*dest >> 7) ? TRUE : FALSE;
+   u32 result = (*dest + src) & 0xFF;
 
-   *dest += src;
-   set_status(system, STATUS_OVERFLOW, (!prev && *dest >> 7) ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,     *dest == 0           ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    *dest < src          ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,     !(*dest & 0x80)      ? TRUE : FALSE);
+   set_status(system, STATUS_OVERFLOW, (!prev && result >> 7) ? TRUE : FALSE);
+   set_status(system, STATUS_ZERO,     result == 0            ? TRUE : FALSE);
+   set_status(system, STATUS_CARRY,    result < src           ? TRUE : FALSE);
+   set_status(system, STATUS_SIGN,     !(result & 0x80)       ? TRUE : FALSE);
+
+   *dest = result;
 }
 
 void add_bcd(channelf_t *system, u8 *augend, u8 addend)
 {
-   u8 tmp = *augend + addend;
+   u8 tmp = *augend + (addend & 0xFF);
 
    u8 c = 0; // high order carry
    u8 ic = 0; // low order carry
@@ -111,23 +124,25 @@ void add_bcd(channelf_t *system, u8 *augend, u8 addend)
    *augend = tmp;
 }
 
-u8 current_op(channelf_t *system)
+i32 current_op(channelf_t *system)
 {
-   return system->rom[PC0];
+   return system->rom[PC0] & 0xFF;
 }
 
-u8 next_op(channelf_t *system)
+i32 next_op(channelf_t *system)
 {
-   return system->rom[PC0 + 1];
+   u8 value = system->rom[PC0 + 1];
+
+   if (value & 0x80)
+      return -1 - (value ^ 0xFF);
+   else
+      return value;
 }
 
-u8 get_immediate(channelf_t *system)
+i32 get_immediate(channelf_t *system)
 {
-   u8 immediate = next_op(system);
-
    PC0++;
-
-   return immediate;
+   return system->rom[PC0] & 0xFF;
 }
 
 u8* isar(channelf_t *system)
@@ -174,14 +189,14 @@ u8* dpchr(channelf_t *system)
    return NULL;
 }
 
-u8 get_rom(channelf_t *system, const u16 address)
+u32 get_rom(channelf_t *system, const u16 address)
 {
-   return system->rom[address];
+   return system->rom[address] & 0xFF;
 }
 
 void lr(u8 *dest, u8 *src)
 {
-   *dest = *src;
+   memcpy(dest, src, 1);
 }
 
 /*
@@ -386,7 +401,6 @@ F8_OP(li)
    A = get_immediate(system);
 }
 
-/* Hack? We add 0 to accumulator to set flags */
 /* 21 */
 F8_OP(ni)
 {
@@ -453,25 +467,25 @@ F8_OP(pi)
 {
    A = get_immediate(system);
    PC1 = PC0 + 2;//hack
-   PC0 = get_immediate(system);
-   PC0 += A * 0x100;
+   PC0 = (get_immediate(system)) & 0xFF;
+   PC0 |= (A << 8);
    PC0--; //hack
 }
 
 /* 29 */
 F8_OP(jmp)
 {
-   A = get_immediate(system);
-   PC0 = get_immediate(system);
-   PC0 += A * 0x100;
+   A    = get_immediate(system);
+   PC0  = get_immediate(system);
+   PC0 += A << 8;
    PC0--; //hack
 }
 
 /* 2A */
 F8_OP(dci)
 {
-   DC0 = get_immediate(system) * 0x100;
-   DC0 += get_immediate(system);
+   DC0  = get_immediate(system) << 8;
+   DC0 |= get_immediate(system);
 }
 
 /* 2B */
@@ -551,8 +565,8 @@ F8_OP(lis)
 /* 80 - 87 */
 F8_OP(bt_n)
 {
-   if ((current_op(system) & 0x07) & W)
-      PC0 += (i8)next_op(system);
+   if (current_op(system) & W)
+      PC0 += next_op(system);
    else
       PC0++;
 }
@@ -607,7 +621,14 @@ F8_OP(cm)
 /* 8E */
 F8_OP(adc)
 {
-   DC0 += (i8)A;
+   i32 adc;
+
+   if (A & 0x80)
+      adc = -1 - (A ^ 0xFF);
+   else
+      adc = A & 0xFF;
+
+   DC0 += adc;
 }
 
 /* 8F */
@@ -635,7 +656,7 @@ F8_OP(bf)
 */
 F8_OP(ins)
 {
-   u8 port = current_op(system) & 0x0F;
+   u32 port = current_op(system) & 0x0F;
 
    if (port == 0)
       system->io[0] = get_input(0);
@@ -737,7 +758,7 @@ F8_OP(ns)
 */
 F8_OP(invalid_opcode)
 {
-   printf("Invalid opcode %02X at %04X\n", current_op(system), PC0);
+   nop(system);
 }
 
 u8 pressf_init(channelf_t *system)
@@ -830,6 +851,7 @@ u8 pressf_init(channelf_t *system)
    operations[0xEF] = invalid_opcode;
    operations[0xFF] = invalid_opcode;
 
+   memset(system->c3850.scratchpad, 0xFF, SCRATCH_SIZE);
    system->total_cycles = 30000;
 
    return pressf_load_rom(system);
@@ -860,7 +882,7 @@ void pressf_step(channelf_t *system)
 {
     u8 op = current_op(system);
 
-    operations[op](system);
+    system->functions[system->pc0](system);
     PC0++;
 }
 

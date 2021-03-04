@@ -34,7 +34,7 @@ typedef struct channelf_t
    u8 io  [IO_PORTS];
    u8 rom [ROM_CART_SIZE + ROM_BIOS_SIZE * 2];
    u8 vram[VRAM_SIZE];
-   u8 dbus;
+   i8 dbus;
 
    u32 cycles;
    u32 total_cycles;

@@ -31,5 +31,11 @@ ROMC_OP(romc16);
 ROMC_OP(romc17);
 ROMC_OP(romc18);
 ROMC_OP(romc19);
+ROMC_OP(romc1a);
+ROMC_OP(romc1b);
+ROMC_OP(romc1c);
+ROMC_OP(romc1d);
+ROMC_OP(romc1e);
+ROMC_OP(romc1f);
 
 #endif
