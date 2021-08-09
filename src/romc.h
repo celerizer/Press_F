@@ -5,6 +5,9 @@
 
 #define ROMC_OP(a) void a(channelf_t* system)
 
+#define CYCLE_SHORT 4
+#define CYCLE_LONG  6
+
 ROMC_OP(romc00);
 ROMC_OP(romc01);
 ROMC_OP(romc02);

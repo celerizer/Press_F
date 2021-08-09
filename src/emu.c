@@ -31,28 +31,36 @@
 
 opcode_t opcodes[256] =
 {
-  { 1, "LR A, Ku",   "Loads register 12 (upper byte of K) into the accumulator." },
-  { 1, "LR A, Kl",   "Loads register 13 (lower byte of K) into the accumulator." },
-  { 1, "LR A, Qu",   "Loads register 14 (upper byte of Q) into the accumulator." },
-  { 1, "LR A, Ql",   "Loads register 15 (lower byte of Q) into the accumulator." },
-  { 1, "LR Ku, A",   "Loads the accumulator into register 12 (upper byte of K)." },
-  { 1, "LR Kl, A",   "Loads the accumulator into register 13 (lower byte of K)." },
-  { 1, "LR Qu, A",   "Loads the accumulator into register 14 (upper byte of Q)." },
-  { 1, "LR Ql, A",   "Loads the accumulator into register 15 (lower byte of Q)." },
-  { 1, "LR K, PC1",  "Loads PC1 into K (registers 12 and 13)." },
-  { 1, "LR PC1, K",  "Loads K (registers 12 and 13) into PC1." },
+  { 1, "LR A, Ku",   "Loads r12 (upper byte of K) into the accumulator." },
+  { 1, "LR A, Kl",   "Loads r13 (lower byte of K) into the accumulator." },
+  { 1, "LR A, Qu",   "Loads r14 (upper byte of Q) into the accumulator." },
+  { 1, "LR A, Ql",   "Loads r15 (lower byte of Q) into the accumulator." },
+  { 1, "LR Ku, A",   "Loads the accumulator into r12 (upper byte of K)." },
+  { 1, "LR Kl, A",   "Loads the accumulator into r13 (lower byte of K)." },
+  { 1, "LR Qu, A",   "Loads the accumulator into r14 (upper byte of Q)." },
+  { 1, "LR Ql, A",   "Loads the accumulator into r15 (lower byte of Q)." },
+  { 1, "LR K, PC1",  "Loads PC1 into K (r12 and r13)." },
+  { 1, "LR PC1, K",  "Loads K (r12 and r13) into PC1." },
   { 1, "LR A, ISAR", "Loads the register referenced by the ISAR into the accumulator."},
   { 1, "LR ISAR, A", "Loads the accumulator into the register referenced by the ISAR."},
-  { 1, "PK",         "Loads PC0 into PC1, then loads K (registers 12 and 13) into PC0."},
-  { 1, "LR PC0, Q",  "Loads Q (registers 14 and 15) into PC0."},
-  { 1, "LR Q, DC0",  "Loads DC0 into Q (registers 14 and 15)."},
-  { 1, "LR DC0, Q",  "Loads Q (registers 14 and 15) into DC0."},
-  { 1, "LR DC0, H",  "Loads H (registers 10 and 11) into DC0."},
-  { 1, "LR H, DC0",  "Loads DC0 into H (registers 10 and 11)."},
+  { 1, "PK",         "Loads PC0 into PC1, then loads K (r12 and r13) into PC0."},
+  { 1, "LR PC0, Q",  "Loads Q (r14 and r15) into PC0."},
+  { 1, "LR Q, DC0",  "Loads DC0 into Q (r14 and r15)."},
+  { 1, "LR DC0, Q",  "Loads Q (r14 and r15) into DC0."},
+  { 1, "LR DC0, H",  "Loads H (r10 and r11) into DC0."},
+  { 1, "LR H, DC0",  "Loads DC0 into H (r10 and r11)."},
   { 1, "SR 1",       "Shifts the accumulator right by one bit."},
   { 1, "SL 1",       "Shifts the accumulator left by one bit."},
   { 1, "SR 4",       "Shifts the accumulator right by four bits."},
   { 1, "SL 4",       "Shifts the accumulator left by four bits."},
+  { 1, "LM",         "Loads the value addressed by DC0 into the accumulator."},
+  { 1, "ST",         "Loads the accumulator into DC0."},
+  { 1, "COM",        "Complements the accumulator."},
+  { 1, "LNK",        "Adds the carry status flag to the accumulator."},
+  { 1, "DI" ,        "Disables interrupt requests."},
+  { 1, "EI" ,        "Enables interrupt requests."},
+  { 1, "POP",        "Loads PC1 into PC0."},
+
 };
 
 #define F8_OP(a) void a(channelf_t *system)
@@ -236,7 +244,15 @@ F8_OP(lr_k_pc1)
 */
 F8_OP(lr_pc1_k)
 {
+#if PF_ROMC == TRUE
+   system->dbus = KU;
+   romc15(system);
+   system->dbus = KL;
+   romc18(system);
+#else
    PC1 = read_16(&KU);
+   system->cycles += CYCLE_LONG * 2;
+#endif
 }
 
 /* 0A */
@@ -354,12 +370,22 @@ F8_OP(lnk)
 /* 1A */
 F8_OP(di)
 {
+#if PF_ROMC == TRUE
+   romc1c(system);
+#else
+   system->cycles += CYCLE_LONG;
+#endif
    set_status(system, STATUS_INTERRUPTS, FALSE);
 }
 
 /* 1B */
 F8_OP(ei)
 {
+#if PF_ROMC == TRUE
+   romc1c(system);
+#else
+   system->cycles += CYCLE_LONG;
+#endif
    set_status(system, STATUS_INTERRUPTS, TRUE);
 }
 

@@ -1,9 +1,6 @@
 #ifndef PRESS_F_ROMC_C
 #define PRESS_F_ROMC_C
 
-#define CYCLE_SHORT 4
-#define CYCLE_LONG  6
-
 #include "config.h"
 #include "romc.h"
 #include "types.h"
@@ -454,7 +451,8 @@ ROMC_OP(romc15)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->pc1 = (device->pc1 & 0x00FF) + system->dbus * 0x100;
+      device->pc1 &= 0x00FF;
+      device->pc1 |= system->dbus << 8;
    }
 
    system->cycles += CYCLE_LONG;
@@ -502,7 +500,8 @@ ROMC_OP(romc18)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->pc1 = (device->pc1 & 0xFF00) + system->dbus;
+      device->pc1 &= 0xFF00;
+      device->pc1 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;

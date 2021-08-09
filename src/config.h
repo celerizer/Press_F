@@ -51,6 +51,15 @@
 #endif
 
 /*
+   Controls whether or not to emulate ROMC functions.
+   Not emulating ROMC allows for using simpler instruction sets, but removes
+   some functionality.
+*/
+#ifndef PF_ROMC
+#define PF_ROMC FALSE
+#endif
+
+/*
    Controls whether or not to break possibly redundant loops in ROMC functions.
    While allowing this should be more accurate, the only way it should
    change behavior is on miswired or otherwise damaged hardware.
