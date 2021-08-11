@@ -5,6 +5,8 @@
 #include "romc.h"
 #include "types.h"
 
+/* Macros to keep code less redundant */
+
 #define INIT_DEVICES \
    f8_device_t *device; \
    u8 i;
@@ -14,25 +16,29 @@
    { \
       device = &system->f8devices[i];
 
-u8 f8device_contains(f8_device_t* device, u16 address)
+/* Helper functions */
+
+/*
+   Returns whether a given virtual address is within the region a given
+   F8 device is mapped in.
+*/
+static u8 f8device_contains(f8_device_t* device, u16 address)
 {
    return address >= device->start && address <= device->end;
 }
 
-u8* f8device_vptr(f8_device_t* device, u16 address)
+static u8* f8device_vptr(f8_device_t* device, u16 address)
 {
-   return &device->data[address & device->mask];
+   address -= device->start;
+   address &= device->mask;
+   return &device->data[address];
 }
 
-u8 f8device_write(f8_device_t *device, u16 address, u8 data)
+static void f8device_write(f8_device_t *device, u16 address, u8 data)
 {
-   if (f8device_contains(device, address))
-   {
-      device->data[address & device->mask] = data;
-      return TRUE;
-   }
-
-   return FALSE;
+   address -= device->start;
+   address &= device->mask;
+   device->data[address] = data;
 }
 
 /*
@@ -161,7 +167,8 @@ ROMC_OP(romc05)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      f8device_write(device, device->dc0, system->dbus);
+      if (f8device_contains(device, device->dc0))
+         f8device_write(device, device->dc0, system->dbus);
       device->dc0++;
    }
 
@@ -389,9 +396,13 @@ ROMC_OP(romc11)
    FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
          system->dbus = *f8device_vptr(device, device->pc0);
+ #if PF_ROMC_REDUNDANCY == TRUE
+      break;
+ #endif
    }
    FOREACH_DEVICE
-      device->dc0 = (u16)((device->dc0 & 0x00FF) | (system->dbus << 8));
+      device->dc0 &= 0x00FF;
+      device->dc0 |= system->dbus << 8;
    }
 
    system->cycles += CYCLE_LONG;
@@ -409,7 +420,8 @@ ROMC_OP(romc12)
 
    FOREACH_DEVICE
       device->pc1 = device->pc0;
-      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+      device->pc0 &= 0xFF00;
+      device->pc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -435,7 +447,8 @@ ROMC_OP(romc14)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->pc0 = (device->pc0 & 0x00FF) + system->dbus * 0x100;
+      device->pc0 &= 0x00FF;
+      device->pc0 |= system->dbus << 8;
    }
 
    system->cycles += CYCLE_LONG;
