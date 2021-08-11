@@ -289,9 +289,6 @@ ROMC_OP(romc0b)
    must place the contents of the memory word addressed by PC0 onto the
    data bus; then all devices move the value that has just been placed on
    the data bus into the low order byte of PC0.
-
-   NOTE: We could break once found to do this quicker, but we want to emulate
-      proper race conditions eventually.
 */
 ROMC_OP(romc0c)
 {
@@ -299,10 +296,16 @@ ROMC_OP(romc0c)
 
    FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
+      {
          system->dbus = *f8device_vptr(device, device->pc0);
+#if PF_ROMC_REDUNDANCY == FALSE
+         break;
+#endif
+      }
    }
    FOREACH_DEVICE
-      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+      device->pc0 &= 0xFF00;
+      device->pc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -338,11 +341,16 @@ ROMC_OP(romc0e)
 
    FOREACH_DEVICE
       if (f8device_contains(device, device->pc0))
+      {
          system->dbus = *f8device_vptr(device, device->pc0);
+#if PF_ROMC_REDUNDANCY == FALSE
+         break;
+#endif
+      }
    }
    FOREACH_DEVICE
-      device = &system->f8devices[i];
-      device->dc0 = (device->dc0 & 0xFF00) | system->dbus;
+      device->dc0 &= 0xFF00;
+      device->dc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -362,9 +370,14 @@ ROMC_OP(romc0f)
 {
    INIT_DEVICES
 
+   /*
+      TODO: The interrupting device with highest priority must place the low
+      order byte of the interrupt vector on the data bus.
+   */
    FOREACH_DEVICE
       device->pc1 = device->pc0;
-      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+      device->pc0 &= 0xFF00;
+      device->pc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -375,7 +388,7 @@ ROMC_OP(romc0f)
    ---
    Inhibit any modification to the interrupt priority logic.
 
-   NOTE: TODO? What is this
+   NOTE: TODO
 */
 ROMC_OP(romc10)
 {
@@ -540,8 +553,10 @@ ROMC_OP(romc19)
    ROMC 1 1 0 1 0 / 1A / L
    ---
    During the prior cycle, an I/O port timer or interrupt controller register
-   was addressed; the device conatining the addressed port must move the
+   was addressed; the device containing the addressed port must move the
    current contents of the data bus into the addressed port.
+
+   NOTE: TODO
 */
 ROMC_OP(romc1a)
 {
