@@ -63,6 +63,8 @@ typedef struct f8_device_t
    void (*init) (void *device);
    void (*free) (void *device);
    void (*reset)(void *device);
+
+   void (*functions[8])(f8_device_t *device, u8 *port_data);
 } f8_device_t;
 
 #endif

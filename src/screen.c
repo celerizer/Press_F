@@ -25,7 +25,6 @@ static const u16 PIXEL_COLOR_RGB565[4][4] =
 #define GET_PIXEL(a, b) ((a[(b) / 4] >> (3 - ((b) & 3)) * 2) & 3)
 
 /* Returns the 2-bit palette index for a scanline (defined by bit 1 of columns 125 and 126) */
-/* TODO: This is a mess */
 #define GET_PALETTE(a, b) ((GET_PIXEL(a, ((b) & 0xFF80) + 125) & 2) >> 1) + (GET_PIXEL(a, ((b) & 0xFF80) + 126) & 2)
 
 u8 draw_frame_rgb565_full(u8 *vram, u16 *buffer)

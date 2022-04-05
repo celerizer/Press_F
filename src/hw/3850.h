@@ -11,7 +11,7 @@
 #define STATUS_OVERFLOW   (1 << 3)
 #define STATUS_INTERRUPTS (1 << 4)
 
-typedef struct c3850_t
+typedef struct f3850_t
 {
    /* 8 bit */
    u8 accumulator;
@@ -24,6 +24,6 @@ typedef struct c3850_t
 
    /* 5 bit */
    u8 status_register;
-} c3850_t;
+} f3850_t;
 
 #endif

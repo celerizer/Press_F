@@ -517,7 +517,7 @@ F8_OP(dci)
 /* 2B */
 F8_OP(nop)
 {
-   /* NOP! */
+   (void)system;
 }
 
 /* 2C */

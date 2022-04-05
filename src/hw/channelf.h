@@ -4,7 +4,7 @@
 #include "3850.h"
 #include "f8_device.h"
 
-#define IO_PORTS      16
+#define IO_PORTS      32
 
 #define ROM_BIOS_A    0x0000
 #define ROM_BIOS_B    0x0400
@@ -21,10 +21,17 @@
 /* Arbitrary limit for max number of devices hooked up to a system */
 #define F8_MAX_DEVICES 16
 
+typedef struct
+{
+   f8_device_t *device;
+   void (*function)(f8_device_t *device, u8 *io_port);
+   u8 data;
+} io_t;
+
 typedef struct channelf_t
 {
    void    (**functions)();
-   c3850_t c3850;
+   f3850_t c3850;
 
    u16 dc0;
    u16 dc1;
@@ -39,8 +46,10 @@ typedef struct channelf_t
    u32 cycles;
    u32 total_cycles;
 
-   f8_device_t f8devices[F8_MAX_DEVICES];
-   u16         f8device_count;
+   f8_device_t  f8devices[F8_MAX_DEVICES];
+   u16          f8device_count;
+
+   io_t         io_ports[IO_PORTS];
 } channelf_t;
 
 #endif

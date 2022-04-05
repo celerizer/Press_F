@@ -36,6 +36,8 @@ static u8* f8device_vptr(f8_device_t* device, u16 address)
 
 static void f8device_write(f8_device_t *device, u16 address, u8 data)
 {
+   if (!(device->flags & F8_DATA_WRITABLE))
+      return;
    address -= device->start;
    address &= device->mask;
    device->data[address] = data;
@@ -494,7 +496,8 @@ ROMC_OP(romc16)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->dc0 = (device->dc0 & 0x00FF) + system->dbus * 0x100;
+     device->dc0 &= 0x00FF;
+     device->dc0 |= system->dbus << 8;
    }
 
    system->cycles += CYCLE_LONG;
@@ -510,7 +513,8 @@ ROMC_OP(romc17)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->pc0 = (device->pc0 & 0xFF00) + system->dbus;
+      device->pc0 &= 0xFF00;
+      device->pc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -543,7 +547,8 @@ ROMC_OP(romc19)
    INIT_DEVICES
 
    FOREACH_DEVICE
-      device->dc0 = (device->dc0 & 0xFF00) + system->dbus;
+      device->dc0 &= 0xFF00;
+      device->dc0 |= system->dbus;
    }
 
    system->cycles += CYCLE_LONG;
@@ -571,6 +576,8 @@ ROMC_OP(romc1a)
    the I/O port on the data bus.
    (Note that the contents of timer and interrupt control registers cannot be
    read back onto the data bus.)
+
+   NOTE: TODO
 */
 ROMC_OP(romc1b)
 {
@@ -599,12 +606,14 @@ ROMC_OP(romc1d)
    u16 temp;
 
    FOREACH_DEVICE
+      if (device->flags & F8_NO_DC1)
+         continue;
       temp = device->dc0;
       device->dc0 = device->dc1;
       device->dc0 = temp;
    }
 
-   system->cycles += CYCLE_LONG;
+   system->cycles += CYCLE_SHORT;
 }
 
 /*
