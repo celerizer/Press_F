@@ -16,6 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    src/debug.c \
     src/emu.c \
     src/file.c \
     src/font.c \
@@ -34,6 +35,7 @@ SOURCES += \
 
 HEADERS += \
     src/config.h \
+    src/debug.h \
     src/emu.h \
     src/file.h \
     src/font.h \

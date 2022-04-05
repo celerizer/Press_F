@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "emu.h"
 #include "hle.h"
 #include "input.h"
@@ -906,7 +907,10 @@ u8 pressf_load_rom(channelf_t *system)
 /* TODO: Add SAFETY checks here */
 void pressf_step(channelf_t *system)
 {
-    u8 op = current_op(system);
+#if PF_DEBUGGER == TRUE
+    if (debug_should_break(PC0))
+      return;
+#endif
 
     system->functions[system->pc0](system);
     PC0++;
