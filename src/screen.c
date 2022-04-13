@@ -175,7 +175,7 @@ void vram_write(u8 *vram, u8 x, u8 y, u8 value)
    case 3:
       mask = 0xFC;
       break;
-   /* Shouldn't ever happen, but here to silence a warning. */
+   /* Cannot happen, but here to silence a warning. */
    default:
       return;
    }

@@ -2,6 +2,7 @@
 #define PRESS_F_3850_H
 
 #include "../types.h"
+#include "f8_device.h"
 
 #define SCRATCH_SIZE 0x40
 
@@ -25,5 +26,7 @@ typedef struct f3850_t
    /* 5 bit */
    u8 status_register;
 } f3850_t;
+
+void f3850_init(f8_device_t *device);
 
 #endif

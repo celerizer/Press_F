@@ -1,7 +1,7 @@
 #ifndef PRESS_F_2102_C
 #define PRESS_F_2102_C
 
-#include <string.h>
+#include <stdlib.h>
 
 #include "f8_device.h"
 #include "2102.h"

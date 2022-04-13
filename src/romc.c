@@ -453,20 +453,23 @@ ROMC_OP(romc13)
 }
 
 /*
-   ROMC 1 0 1 0 0 / 14 / L
-   ---
-   All devices move the contents of the dbus into the high order byte of PC0.
+  ROMC 1 0 1 0 0 / 14 / L
+  ---
+  All devices move the contents of the dbus into the high order byte of PC0.
 */
 ROMC_OP(romc14)
 {
-   INIT_DEVICES
+  INIT_DEVICES
 
-   FOREACH_DEVICE
+  FOREACH_DEVICE
+    if (!(device->flags & F8_NO_PC0))
+    {
       device->pc0 &= 0x00FF;
       device->pc0 |= system->dbus << 8;
-   }
+    }
+  }
 
-   system->cycles += CYCLE_LONG;
+  system->cycles += CYCLE_LONG;
 }
 
 /*
