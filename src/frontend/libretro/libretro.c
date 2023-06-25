@@ -404,7 +404,7 @@ bool retro_serialize(void *data, size_t size)
    serialize_add_value(i, &retro_channelf.dc1,   2);
    serialize_add_value(i, &retro_channelf.pc0,   2);
    serialize_add_value(i, &retro_channelf.pc1,   2);
-   serialize_add_bytes(i, &retro_channelf.c3850, sizeof(c3850_t));
+   //serialize_add_bytes(i, &retro_channelf.f3850, sizeof(f3850_t));
    serialize_add_bytes(i, &retro_channelf.io,    IO_PORTS);
    serialize_add_bytes(i, &retro_channelf.vram,  VRAM_SIZE);
 
@@ -419,7 +419,7 @@ bool retro_unserialize(const void *data, size_t size)
    unserialize_add_value(&retro_channelf.dc1,   i, 2);
    unserialize_add_value(&retro_channelf.pc0,   i, 2);
    unserialize_add_value(&retro_channelf.pc1,   i, 2);
-   unserialize_add_bytes(&retro_channelf.c3850, i, sizeof(c3850_t));
+   //unserialize_add_bytes(&retro_channelf.f3850, i, sizeof(f3850_t));
    unserialize_add_bytes(&retro_channelf.io,    i, IO_PORTS);
    unserialize_add_bytes(&retro_channelf.vram,  i, VRAM_SIZE);
    force_draw_frame();

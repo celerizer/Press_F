@@ -4,15 +4,16 @@
 extern "C"
 {
   #include "../../emu.h"
-  #include "../../file.h"
   #include "../../input.h"
   #include "../../sound.h"
+  #include "../../hw/system.h"
 }
 
 #include "main.h"
 #include "mainwindow.h"
 #include "registerswindow.h"
 
+#include <cstdio>
 #include <string>
 
 #include <QApplication>
@@ -55,26 +56,6 @@ MainWindow::MainWindow()
   setWindowTitle("Press F");
   setWindowIcon(QIcon(":/icons/logo"));
 
-  /* Initialize emulation (TODO) */
-  QFile bios_a_file(QDir::currentPath() + "/bios/sl31253.rom");
-  QFile bios_b_file(QDir::currentPath() + "/bios/sl31254.rom");
-
-  if (!bios_a_file.open(QIODevice::ReadOnly) ||
-      !bios_b_file.open(QIODevice::ReadOnly))
-    exit(1);
-
-  QByteArray bios_a_data = bios_a_file.read(ROM_BIOS_SIZE);
-  QByteArray bios_b_data = bios_b_file.read(ROM_BIOS_SIZE);
-
-  if (bios_a_data.size() != ROM_BIOS_SIZE ||
-      bios_b_data.size() != ROM_BIOS_SIZE)
-    exit(2);
-
-  load_single_bios(&g_ChannelF, reinterpret_cast<const u8*>(bios_a_data.data()),
-    ROM_BIOS_SIZE, FALSE);
-  load_single_bios(&g_ChannelF, reinterpret_cast<const u8*>(bios_b_data.data()),
-    ROM_BIOS_SIZE, TRUE);
-
   /* Init sound */
   QAudioFormat Format;
   Format.setSampleRate(PF_FREQUENCY);
@@ -95,6 +76,44 @@ MainWindow::MainWindow()
   m_AudioDevice = m_AudioOutput->start();
 
   pressf_init(&g_ChannelF);
+  f8_system_init(&g_ChannelF, &pf_systems[0]);
+
+  /* Initialize emulation (TODO) */
+  QFile bios_a_file("C:/f8/sl31253.bin");
+  QFile bios_b_file("C:/f8/sl31254.bin");
+
+  if (!bios_a_file.open(QIODevice::ReadOnly) ||
+      !bios_b_file.open(QIODevice::ReadOnly))
+    exit(1);
+
+  QByteArray bios_a_data = bios_a_file.read(1024);
+  QByteArray bios_b_data = bios_b_file.read(1024);
+
+  if (bios_a_data.size() != 1024 ||
+      bios_b_data.size() != 1024)
+    exit(2);
+
+  memcpy(g_ChannelF.f8devices[1].data, reinterpret_cast<const u8*>(bios_a_data.data()), 1024);
+  memcpy(g_ChannelF.f8devices[2].data, reinterpret_cast<const u8*>(bios_b_data.data()), 1024);
+
+  /*
+  FILE *file = fopen("C:/f8/dump-dk.txt", "wb");
+  fprintf(file, "pf_monitor_t mon_steps[] = {");
+  for (int i = 0; i < 10000; i++)
+  {
+    fprintf(file, "{ 0x%04X, 0x%04X, 0x%04X, 0x%04X, 0x%02X, 0x%02X, 0x%02X },\n",
+            g_ChannelF.f8devices[0].pc0,
+            g_ChannelF.f8devices[0].pc1,
+            g_ChannelF.f8devices[0].dc0,
+            g_ChannelF.f8devices[0].dc1,
+            g_ChannelF.main_cpu->accumulator.u,
+            g_ChannelF.main_cpu->status_register,
+            g_ChannelF.main_cpu->isar);
+    pressf_step(&g_ChannelF);
+  }
+  fprintf(file, "};");
+  exit(2);
+  */
 
   /* TODO: Remove */
   RegistersWindow *m_Regs = new RegistersWindow();
@@ -119,23 +138,23 @@ void MainWindow::onFrame()
   set_input_button(0, INPUT_HOLD,  m_Gamepads[0].buttonR1());
   set_input_button(0, INPUT_START, m_Gamepads[0].buttonStart());
 
-  set_input_button(1, INPUT_RIGHT,      m_Gamepads[0].buttonRight());
-  set_input_button(1, INPUT_LEFT,       m_Gamepads[0].buttonLeft());
-  set_input_button(1, INPUT_BACK,       m_Gamepads[0].buttonDown());
-  set_input_button(1, INPUT_FORWARD,    m_Gamepads[0].buttonUp());
-  set_input_button(1, INPUT_ROTATE_CCW, m_Gamepads[0].buttonX());
-  set_input_button(1, INPUT_ROTATE_CW,  m_Gamepads[0].buttonB());
-  set_input_button(1, INPUT_PULL,       m_Gamepads[0].buttonY());
-  set_input_button(1, INPUT_PUSH,       m_Gamepads[0].buttonA());
+  set_input_button(4, INPUT_RIGHT,      m_Gamepads[0].buttonRight());
+  set_input_button(4, INPUT_LEFT,       m_Gamepads[0].buttonLeft());
+  set_input_button(4, INPUT_BACK,       m_Gamepads[0].buttonDown());
+  set_input_button(4, INPUT_FORWARD,    m_Gamepads[0].buttonUp());
+  set_input_button(4, INPUT_ROTATE_CCW, m_Gamepads[0].buttonX());
+  set_input_button(4, INPUT_ROTATE_CW,  m_Gamepads[0].buttonB());
+  set_input_button(4, INPUT_PULL,       m_Gamepads[0].buttonY());
+  set_input_button(4, INPUT_PUSH,       m_Gamepads[0].buttonA());
 
-  set_input_button(4, INPUT_RIGHT,      m_Gamepads[1].buttonRight());
-  set_input_button(4, INPUT_LEFT,       m_Gamepads[1].buttonLeft());
-  set_input_button(4, INPUT_BACK,       m_Gamepads[1].buttonDown());
-  set_input_button(4, INPUT_FORWARD,    m_Gamepads[1].buttonUp());
-  set_input_button(4, INPUT_ROTATE_CCW, m_Gamepads[1].buttonX());
-  set_input_button(4, INPUT_ROTATE_CW,  m_Gamepads[1].buttonB());
-  set_input_button(4, INPUT_PULL,       m_Gamepads[1].buttonY());
-  set_input_button(4, INPUT_PUSH,       m_Gamepads[1].buttonA());
+  set_input_button(1, INPUT_RIGHT,      m_Gamepads[1].buttonRight());
+  set_input_button(1, INPUT_LEFT,       m_Gamepads[1].buttonLeft());
+  set_input_button(1, INPUT_BACK,       m_Gamepads[1].buttonDown());
+  set_input_button(1, INPUT_FORWARD,    m_Gamepads[1].buttonUp());
+  set_input_button(1, INPUT_ROTATE_CCW, m_Gamepads[1].buttonX());
+  set_input_button(1, INPUT_ROTATE_CW,  m_Gamepads[1].buttonB());
+  set_input_button(1, INPUT_PULL,       m_Gamepads[1].buttonY());
+  set_input_button(1, INPUT_PUSH,       m_Gamepads[1].buttonA());
 
   /* Emulation loop */
   pressf_run(&g_ChannelF);
@@ -156,9 +175,11 @@ void MainWindow::onFrame()
 void MainWindow::onEjectCart()
 {
   pressf_reset(&g_ChannelF);
+  /*
   memset(reinterpret_cast<void*>(&(g_ChannelF.rom[ROM_CARTRIDGE])), 0,
     ROM_CART_SIZE);
-  pressf_load_rom(&g_ChannelF);
+    */
+  //pressf_load_rom(&g_ChannelF);
 }
 
 bool MainWindow::loadCartridge(QString Filename)
@@ -170,9 +191,10 @@ bool MainWindow::loadCartridge(QString Filename)
   else
   {
     pressf_reset(&g_ChannelF);
+    /*
     Rom.read(reinterpret_cast<char*>(&g_ChannelF.rom[ROM_CARTRIDGE]),
              ROM_CART_SIZE);
-    pressf_load_rom(&g_ChannelF);
+    */
 
     /*
       Update the window title to something friendly looking, ie:

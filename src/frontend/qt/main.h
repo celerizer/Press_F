@@ -3,9 +3,9 @@
 
 extern "C"
 {
-  #include "../../hw/channelf.h"
+  #include "../../hw/system.h"
 }
 
-extern channelf_t g_ChannelF;
+extern f8_system_t g_ChannelF;
 
 #endif

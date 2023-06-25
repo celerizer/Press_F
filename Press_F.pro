@@ -8,7 +8,7 @@ CONFIG += c++11
 # any Qt feature that has been marked deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
-DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += QT_DEPRECATED_WARNINGS std=c89
 
 # You can also make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -18,7 +18,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     src/debug.c \
     src/emu.c \
-    src/file.c \
     src/font.c \
     src/frontend/qt/framebuffer_widget.cpp \
     src/frontend/qt/main.cpp \
@@ -27,9 +26,17 @@ SOURCES += \
     src/frontend/qt/settings.cpp \
     src/hle.c \
     src/hw/2102.c \
+    src/hw/3850.c \
+    src/hw/3851.c \
+    src/hw/fairbug_parallel.c \
+    src/hw/hand_controller.c \
+    src/hw/selector_control.c \
+    src/hw/system.c \
+    src/hw/vram.c \
     src/input.c \
     src/romc.c \
     src/screen.c \
+    src/software.c \
     src/sound.c \
     src/wave.c
 
@@ -37,7 +44,6 @@ HEADERS += \
     src/config.h \
     src/debug.h \
     src/emu.h \
-    src/file.h \
     src/font.h \
     src/frontend/qt/framebuffer_widget.h \
     src/frontend/qt/main.h \
@@ -47,11 +53,18 @@ HEADERS += \
     src/hle.h \
     src/hw/2102.h \
     src/hw/3850.h \
-    src/hw/channelf.h \
+    src/hw/3851.h \
     src/hw/f8_device.h \
+    src/hw/fairbug_parallel.h \
+    src/hw/hand_controller.h \
+    src/hw/kdbug.h \
+    src/hw/selector_control.h \
+    src/hw/system.h \
+    src/hw/vram.h \
     src/input.h \
     src/romc.h \
     src/screen.h \
+    src/software.h \
     src/sound.h \
     src/types.h \
     src/wave.h

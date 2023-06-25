@@ -1,6 +1,3 @@
-#ifndef PRESS_F_SOUND_C
-#define PRESS_F_SOUND_C
-
 #include <string.h>
 
 #include "sound.h"
@@ -67,12 +64,12 @@ void sound_write()
 
 void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
 {
-#ifdef PF_AUDIO_ENABLE
-   u16 current_tick = PF_SAMPLES * ((float)current_cycles / (float)total_cycles);
+#if PF_AUDIO_ENABLE
+   unsigned current_tick = PF_SAMPLES * ((float)current_cycles / (float)total_cycles);
 
    if (current_tick != last_tick)
    {
-      u16 i;
+      unsigned i;
 
       for (i = last_tick; i < current_tick; i++)
          frequencies[i] = frequency_last;
@@ -81,5 +78,3 @@ void sound_push_back(u8 frequency, u32 current_cycles, u32 total_cycles)
    frequency_last = SOUND_FREQUENCIES[frequency];
 #endif
 }
-
-#endif
