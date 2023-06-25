@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "font.h"
+#include "hw/system.h"
 
 /* Define some helpers to make the font more readable from this source file */
 /* Each font character is effectively 5x5 pixels, but is stored as 8x5 */
@@ -44,13 +45,13 @@ typedef u8 char_t[5];
 
 typedef struct font_t
 {
-   char_t zero, one, two, three, four, five, six, seven, eight, nine,
-      g, question_mark, t, space, m, x, block, colon, hyphen,
-      goalie_a, goalie_b, ball,
-      line000, line180, line030, line045, line060, line240, line225, line210;
+  char_t zero, one, two, three, four, five, six, seven, eight, nine,
+    g, question_mark, t, space, m, x, block, colon, hyphen,
+    goalie_a, goalie_b, ball,
+    line000, line180, line030, line045, line060, line240, line225, line210;
 } font_t;
 
-static const font_t font_fairchild =
+static font_t font_fairchild =
 {
    {
       _11111,
@@ -264,7 +265,7 @@ static const font_t font_fairchild =
    }
 };
 
-static const font_t font_cute =
+static font_t font_cute =
 {
    {
       ___11_,
@@ -474,7 +475,7 @@ static const font_t font_cute =
    }
 };
 
-static const font_t font_skinny =
+static font_t font_skinny =
 {
    {
       __111_,
@@ -684,38 +685,41 @@ static const font_t font_skinny =
    }
 };
 
-void font_load(channelf_t *system, const u8 id)
+void font_load(f8_system_t *system, const u8 id)
 {
-   if (system)
-   {
-      const font_t *font = &font_fairchild;
+  if (system)
+  {
+    font_t *font = &font_fairchild;
+    u8 hack = PF_COLOR_RED | PF_FONT_LINE_180;
 
-      switch (id)
-      {
-      case FONT_CUTE:
-         font = &font_cute;
-         break;
-      case FONT_SKINNY:
-         font = &font_skinny;
-      }
-      memcpy(&system->rom[0x767], font, sizeof(*font));
+    switch (id)
+    {
+    case FONT_CUTE:
+      font = &font_cute;
+      break;
+    case FONT_SKINNY:
+      font = &font_skinny;
+    }
 
-      /* 
-         The on-board games use the '1' character to form the vertical lines
-         that make up the playfield. This edit causes the game to instead use
-         the graphic for a straight paddle, which is identical.
+    /* Place the font data in memory. */
+    f8_write(system, 0x767, font, sizeof(font_t));
 
-         This lets the correct lines get drawn even if the '1' character is
-         edited in the chosen font.
-      */
-      system->rom[0x01FD] = PF_COLOR_RED | PF_FONT_LINE_180;
-      system->rom[0x0453] = PF_COLOR_RED | PF_FONT_LINE_180;
-   }
+    /**
+     * The on-board games use the '1' character to form the vertical lines
+     * that make up the playfield. This edit causes the game to instead use
+     * the graphic for a straight paddle, which is identical.
+
+     * This lets the correct lines get drawn even if the '1' character is
+     * edited in the chosen font.
+     */
+    f8_write(system, 0x01FD, &hack, sizeof(hack));
+    f8_write(system, 0x0453, &hack, sizeof(hack));
+  }
 }
 
-void font_reset(channelf_t *system)
+void font_reset(f8_system_t *system)
 {
-   font_load(system, 0);
+  font_load(system, FONT_FAIRCHILD);
 }
 
 #endif

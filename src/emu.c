@@ -1,6 +1,3 @@
-#ifndef PRESS_F_EMU_C
-#define PRESS_F_EMU_C
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,22 +10,22 @@
 #include "screen.h"
 #include "sound.h"
 
-#define A    system->c3850.accumulator
-#define ISAR system->c3850.isar
-#define W    system->c3850.status_register
+#define A    ((f3850_t*)system->f8devices[0].device)->accumulator
+#define ISAR ((f3850_t*)system->f8devices[0].device)->isar
+#define W    ((f3850_t*)system->f8devices[0].device)->status_register
 
-#define J    system->c3850.scratchpad[0x09]
-#define HU   system->c3850.scratchpad[0x0A]
-#define HL   system->c3850.scratchpad[0x0B]
-#define KU   system->c3850.scratchpad[0x0C]
-#define KL   system->c3850.scratchpad[0x0D]
-#define QU   system->c3850.scratchpad[0x0E]
-#define QL   system->c3850.scratchpad[0x0F]
+#define J    ((f3850_t*)system->f8devices[0].device)->scratchpad[0x09]
+#define HU   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0A]
+#define HL   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0B]
+#define KU   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0C]
+#define KL   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0D]
+#define QU   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0E]
+#define QL   ((f3850_t*)system->f8devices[0].device)->scratchpad[0x0F]
 
-#define DC0  system->dc0
-#define DC1  system->dc1
-#define PC0  system->pc0
-#define PC1  system->pc1
+#define DC0  system->f8devices[0].dc0
+#define DC1  system->f8devices[0].dc1
+#define PC0  system->f8devices[0].pc0
+#define PC1  system->f8devices[0].pc1
 
 opcode_t opcodes[256] =
 {
@@ -64,54 +61,68 @@ opcode_t opcodes[256] =
 
 };
 
-#define F8_OP(a) void a(channelf_t *system)
+#define F8_OP(a) void a(f8_system_t *system)
 
-static void (*operations[256])(channelf_t *system);
+static void (*operations[256])(f8_system_t *system);
 
-u16 read_16(void *src)
+int get_status(f8_system_t *system, const unsigned flag)
 {
-#ifndef MSB_FIRST
-   return __builtin_bswap16(*(u16*)src);
-#else
-   return *(u16*)src;
-#endif
+  return (W & flag) != 0;
 }
 
-void write_16(void *dest, u16 src)
+void set_status(f8_system_t *system, const unsigned flag, unsigned enable)
 {
-#ifndef MSB_FIRST
-   src = __builtin_bswap16(src);
-#endif
-   memcpy(dest, &src, 2);
+  W = enable ? W | flag : W & ~flag;
 }
 
-u32 get_status(channelf_t *system, const u32 flag)
+void add(f8_system_t *system, f8_byte *dest, unsigned src)
 {
-   return (W & flag) != 0;
+  unsigned result = dest->u + src;
+
+  /* Sign bit is set if the result is positive or zero */
+  set_status(system, STATUS_SIGN, !(result & B10000000));
+
+  /* We carried if we went above max 8-bit */
+  set_status(system, STATUS_CARRY, result > 0xFF);
+
+  /* We zeroed if the result was zero */
+  set_status(system, STATUS_ZERO, (result & 0xFF) == 0);
+
+  /* We overflowed up or down if result goes beyond 8 bit (changed sign) */
+  set_status(system, STATUS_OVERFLOW, ((result ^ dest->u) & (result ^ src) & 0x80));
+
+  dest->u = result;
 }
 
-void set_status(channelf_t *system, const u32 flag, u32 enable)
+/**
+ * See Section 6.4
+ */
+void add_bcd(f8_system_t *system, f8_byte *augend, unsigned addend)
 {
-   W = enable ? W | flag : W & ~flag;
+  unsigned tmp = augend->u + addend;
+  int c, ic;
+
+  if (((augend->u + addend) & 0xff0) > 0xf0)
+                  c = 1;
+          if ((augend->u & 0x0f) + (addend & 0x0f) > 0x0F)
+                  ic = 1;
+
+  add(system, augend, addend);
+
+  if (!c && !ic)
+    tmp = ((tmp + 0xa0) & 0xf0) + ((tmp + 0x0a) & 0x0f);
+  else if (!c && c)
+    tmp = ((tmp + 0xa0) & 0xf0) + (tmp & 0x0f);
+  else if (c && !c)
+    tmp = (tmp & 0xf0) + ((tmp + 0x0a) & 0x0f);
+
+  augend->u = tmp;
 }
 
-void add(channelf_t *system, u8 *dest, u32 src)
+/*
+void add_bcd(f8_system_t *system, byte *augend, int addend)
 {
-   /* TODO: Make this less awful */
-   u32 prev = (*dest >> 7) ? TRUE : FALSE;
-   u32 result = (*dest + src) & 0xFF;
-
-   set_status(system, STATUS_OVERFLOW, (!prev && result >> 7) ? TRUE : FALSE);
-   set_status(system, STATUS_ZERO,     result == 0            ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    result < src           ? TRUE : FALSE);
-   set_status(system, STATUS_SIGN,     !(result & 0x80)       ? TRUE : FALSE);
-
-   *dest = result;
-}
-
-void add_bcd(channelf_t *system, u8 *augend, u8 addend)
-{
-   u8 tmp = *augend + (addend & 0xFF);
+   u8 tmp = (augend->u + addend;
 
    u8 c = 0; // high order carry
    u8 ic = 0; // low order carry
@@ -132,80 +143,66 @@ void add_bcd(channelf_t *system, u8 *augend, u8 addend)
 
    *augend = tmp;
 }
+*/
 
-i32 current_op(channelf_t *system)
+/**
+ * Gets a pointer to the byte the ISAR (Indirect Scratchpad Address Register)
+ * is addressing. The lower 4 bits of the current opcode determine how the
+ * ISAR is addressing memory.
+ * 00 - 0B : Returns the specified byte directly; ignores ISAR.
+ * 0C      : Returns the byte addressed by ISAR.
+ * 0D      : Returns the byte addressed by ISAR, increments ISAR.
+ * 0E      : Returns the byte addressed by ISAR, decrements ISAR.
+ * 0F      : Returns NULL.
+ * See Table 6-2.
+ **/
+static f8_byte *isar(f8_system_t *system)
 {
-   return system->rom[PC0] & 0xFF;
+  /* Last 4 bits only */
+  u8 opcode = system->dbus.u & B00001111;
+  f8_byte *address = NULL;
+
+  if (opcode < 12)
+  {
+    /* Address scratchpad directly for first 12 bytes */
+    address = &f8_main_cpu(system)->scratchpad[opcode];
+  }
+  else if (opcode != 0x0F)
+    address = &f8_main_cpu(system)->scratchpad[ISAR & 0x3F];
+
+  if (opcode == 0x0D)
+    ISAR = (ISAR & B00111000) | ((ISAR + 1) & B00000111);
+  else if (opcode == 0x0E)
+    ISAR = (ISAR & B00111000) | ((ISAR - 1) & B00000111);
+
+  return address;
 }
 
-i32 next_op(channelf_t *system)
+static f8_byte *dpchr(f8_system_t *system)
 {
-   u8 value = system->rom[PC0 + 1];
+  f8_byte opcode = system->dbus;
 
-   if (value & 0x80)
-      return -1 - (value ^ 0xFF);
-   else
-      return value;
+  /* Last 2 bits only */
+  opcode.u &= B00000011;
+  switch (opcode.u)
+  {
+  case 0:
+    return &KU;
+  case 1:
+    return &KL;
+  case 2:
+    return &QU;
+  case 3:
+    return &QL;
+  }
+
+  /* Cannot be reached */
+  return NULL;
 }
 
-i32 get_immediate(channelf_t *system)
+static void update_status(f8_system_t *system)
 {
-   PC0++;
-   return system->rom[PC0] & 0xFF;
-}
-
-u8* isar(channelf_t *system)
-{
-   u8 opcode = current_op(system);
-   u8 *address = NULL;
-
-   /* Last 4 bits only */
-   opcode &= 0x0F;
-   if (opcode < 0x0C)
-   {
-      /* Address scratchpad directly for first 12 bytes */
-      address = &system->c3850.scratchpad[opcode];
-   }
-   else if (opcode != 0x0F)
-      address = &system->c3850.scratchpad[ISAR & 0x3F];
-
-   if (opcode == 0x0D)
-      ISAR = (ISAR & 0x38) | ((ISAR + 1) & 0x07);
-   else if (opcode == 0x0E)
-      ISAR = (ISAR & 0x38) | ((ISAR - 1) & 0x07);
-
-   return address;
-}
-
-u8* dpchr(channelf_t *system)
-{
-   u8 opcode = current_op(system);
-
-   /* Last 2 bits only */
-   opcode &= 0x03;
-   switch (opcode)
-   {
-   case 0:
-      return &KU;
-   case 1:
-      return &KL;
-   case 2:
-      return &QU;
-   case 3:
-      return &QL;
-   }
-
-   return NULL;
-}
-
-u32 get_rom(channelf_t *system, const u16 address)
-{
-   return system->rom[address] & 0xFF;
-}
-
-void lr(u8 *dest, u8 *src)
-{
-   memcpy(dest, src, 1);
+  add(system, &A, 0);
 }
 
 /*
@@ -215,7 +212,7 @@ void lr(u8 *dest, u8 *src)
 */
 F8_OP(lr_a_dpchr)
 {
-   lr(&A, dpchr(system));
+  A = *dpchr(system);
 }
 
 /*
@@ -225,7 +222,7 @@ F8_OP(lr_a_dpchr)
 */
 F8_OP(lr_dpchr_a)
 {
-   lr(dpchr(system), &A);
+   *dpchr(system) = A;
 }
 
 /*
@@ -235,7 +232,15 @@ F8_OP(lr_dpchr_a)
 */
 F8_OP(lr_k_pc1)
 {
-   write_16(&KU, PC1);
+#if PF_ROMC
+  romc07(system);
+  KU = system->dbus;
+  romc0b(system);
+  KL = system->dbus;
+#else
+  PC1 = read_16(&KU);
+  system->cycles += CYCLE_LONG * 2;
+#endif
 }
 
 /*
@@ -245,144 +250,223 @@ F8_OP(lr_k_pc1)
 */
 F8_OP(lr_pc1_k)
 {
-#if PF_ROMC == TRUE
-   system->dbus = KU;
-   romc15(system);
-   system->dbus = KL;
-   romc18(system);
+#if PF_ROMC
+  system->dbus = KU;
+  romc15(system);
+  system->dbus = KL;
+  romc18(system);
 #else
-   PC1 = read_16(&KU);
-   system->cycles += CYCLE_LONG * 2;
+  PC1 = read_16(&KU);
+  system->cycles += CYCLE_LONG * 2;
 #endif
 }
 
 /* 0A */
 F8_OP(lr_a_isar)
 {
-   lr(&A, &ISAR);
+  A.u = ISAR & B00111111;
 }
 
 /* 0B */
 F8_OP(lr_isar_a)
 {
-   lr(&ISAR, &A);
-   ISAR &= 0x3F;
+  ISAR = A.u & B00111111;
 }
 
 /* 0C */
 /* PK: Loads process counter into backup, K into process counter */
 F8_OP(pk)
 {
-   PC1 = PC0 + 1;
-   PC0 = read_16(&KU) - 1;
+#if PF_ROMC
+  system->dbus = KL;
+  romc12(system);
+  system->dbus = KU;
+  romc14(system);
+#endif
 }
 
 /* 0D */
 F8_OP(lr_pc0_q)
 {
-   PC0 = read_16(&QU) - 1;
+#if PF_ROMC
+  system->dbus = QL;
+  romc17(system);
+  system->dbus = QU;
+  romc14(system);
+#endif
 }
 
 /* 0E */
 F8_OP(lr_q_dc0)
 {
-   write_16(&QU, DC0);
+#if PF_ROMC
+  romc06(system);
+  QU = system->dbus;
+  romc09(system);
+  QL = system->dbus;
+#endif
 }
 
 /* 0F */
 F8_OP(lr_dc0_q)
 {
-   DC0 = read_16(&QU);
+#if PF_ROMC
+  system->dbus = QU;
+  romc16(system);
+  system->dbus = QL;
+  romc19(system);
+#endif
 }
 
 /* 10 */
 F8_OP(lr_dc0_h)
 {
-   DC0 = read_16(&HU);
+#if PF_ROMC
+  system->dbus = HU;
+  romc16(system);
+  system->dbus = HL;
+  romc19(system);
+#endif
 }
 
 /* 11 */
 F8_OP(lr_h_dc0)
 {
-   write_16(&HU, DC0);
+#if PF_ROMC
+  romc06(system);
+  HU = system->dbus;
+  romc09(system);
+  HL = system->dbus;
+#endif
 }
 
-/* ======================================================= F8 shift instructions */
-void shift(channelf_t *system, u8 right, u8 amount)
+static void shift(f8_system_t *system, u8 right, u8 amount)
 {
-   A = right ? A >> amount : A << amount;
-   set_status(system, STATUS_OVERFLOW, FALSE);
-   set_status(system, STATUS_ZERO,     A == 0 ? TRUE : FALSE);
-   set_status(system, STATUS_CARRY,    FALSE);
-   set_status(system, STATUS_SIGN, !(A & 0x80) ? TRUE : FALSE);
+  A.u = right ? A.u >> amount : A.u << amount;
+  set_status(system, STATUS_OVERFLOW, FALSE);
+  set_status(system, STATUS_ZERO,     A.u == 0);
+  set_status(system, STATUS_CARRY,    FALSE);
+  set_status(system, STATUS_SIGN,     A.s >= 0);
 }
 
-/* 12 */
+/**
+ * 12
+ * SR 1 - Shift Right 1
+ * The contents of the accumulator are shifted right either one or four bit
+ * positions, depending on the value of the SR instruction operand.
+ */
 F8_OP(sr_a)
 {
-   shift(system, TRUE, 1);
+  shift(system, TRUE, 1);
 }
 
-/* 13 */
+/**
+ * 13
+ * SL 1 - Shift Left 1
+ * The contents of the accumulator are shifted left either one or four bit
+ * positions, depending on the value of the SL instruction operand.
+ */
 F8_OP(sl_a)
 {
-   shift(system, FALSE, 1);
+  shift(system, FALSE, 1);
 }
 
 /* 14 */
 F8_OP(sr_a_4)
 {
-   shift(system, TRUE, 4);
+  shift(system, TRUE, 4);
 }
 
 /* 15 */
 F8_OP(sl_a_4)
 {
-   shift(system, FALSE, 4);
+  shift(system, FALSE, 4);
 }
 
-/* 16 */
+/**
+ * 16
+ * LM - Load Accumulator from Memory
+ * The contents of the memory byte addressed by the DC0 register are loaded
+ * into the accumulator. The contents of the DC0 registers are incremented
+ * as a result of the LM instruction execution.
+ */
 F8_OP(lm)
 {
-   A = get_rom(system, DC0);
-   DC0++;
+#if PF_ROMC
+  romc02(system);
+  A = system->dbus;
+#else
+  f8_read(system, &A, DC0, sizeof(A));
+  DC0++;
+#endif
 }
 
-/* 17 */
+/**
+ * 17
+ * ST - Store to Memory
+ * The contents of the accumulator are stored in the memory location addressed
+ * by the Data Counter (DC0) registers.
+ * The DC registers' contents are incremented as a result of the instruction
+ * execution.
+ */
 F8_OP(st)
 {
-   /* Does DC0U zero-fill? */
-   DC0 = A + 1;
+#if PF_ROMC
+  system->dbus = A;
+  romc05(system);
+#else
+  f8_write(system, DC0, &A, sizeof(A));
+  DC0++;
+#endif
 }
 
-/* 18 */
+/**
+ * 18
+ * COM - Complement
+ * The accumulator is loaded with its one's complement.
+ */
 F8_OP(com)
 {
-   A ^= 0xFF;
-   add(system, &A, 0);
+  A.u ^= 0xFF;
+  update_status(system);
 }
 
-/* 19 */
+/**
+ * 19
+ * LNK - Link Carry to the Accumulator
+ * The carry bit is binary added to the least significant bit of the
+ * accumulator. The result is stored in the accumulator.
+ */
 F8_OP(lnk)
 {
-   add(system, &A, get_status(system, STATUS_CARRY) ? 1 : 0);
+  add(system, &A, get_status(system, STATUS_CARRY));
 }
 
-/* 1A */
+/**
+ * 1A
+ * DI - Disable Interrupt
+ * The interrupt control bit, ICB, is reset; no interrupt requests will be
+ * acknowledged by the 3850 CPU.
+ */
 F8_OP(di)
 {
-#if PF_ROMC == TRUE
-   romc1c(system);
+#if PF_ROMC
+  romc1c(system);
 #else
-   system->cycles += CYCLE_LONG;
+  system->cycles += CYCLE_LONG;
 #endif
-   set_status(system, STATUS_INTERRUPTS, FALSE);
+  set_status(system, STATUS_INTERRUPTS, FALSE);
 }
 
-/* 1B */
+/**
+ * 1B
+ * EI - Enable Interrupt
+ * The interrupt control bit is set. Interrupt requests will now be
+ * acknowledged by the CPU.
+ */
 F8_OP(ei)
 {
-#if PF_ROMC == TRUE
+#if PF_ROMC
    romc1c(system);
 #else
    system->cycles += CYCLE_LONG;
@@ -390,324 +474,690 @@ F8_OP(ei)
    set_status(system, STATUS_INTERRUPTS, TRUE);
 }
 
-/* 1C */
+/**
+ * 1C
+ * POP - Return from Subroutine
+ * The contents of the Stack Registers (PC1) are transferred to the
+ * Program Counter Registers (PC0).
+ */
 F8_OP(pop)
 {
-   PC0 = PC1 - 1;
+#if PF_ROMC
+  romc04(system);
+#else
+  PC0 = PC1 - 1;
+  system->cycles += CYCLE_SHORT;
+#endif
 }
 
 /* 1D */
 F8_OP(lr_w_j)
 {
-   lr(&W, &J);
+#if PF_ROMC
+  romc1c(system);
+#else
+  system->cycles += CYCLE_LONG;
+#endif
+  W = J.u & B00011111;
 }
 
 /* 1E */
 F8_OP(lr_j_w)
 {
-   lr(&J, &W);
+  J.u = W & B00011111;
 }
 
-/*
-   1F
-   INC (INCrement)
-   Add 1 to the accumulator
-*/
+/**
+ * 1F
+ * INC - Increment Accumulator
+ * The content of the accumulator is increased by one binary count.
+ */
 F8_OP(inc)
 {
-   add(system, &A, 1);
+  add(system, &A, 1);
+  system->cycles += CYCLE_SHORT;
 }
 
-/*
-   20
-   LI (Load Immediate)
-   Set accumulator to a specified 8-bit value
-*/
+/**
+ * 20
+ * LI - Load Immediate
+ * The value provided by the operand of the LI instruction is loaded into the
+ * accumulator.
+ */
 F8_OP(li)
 {
-   A = get_immediate(system);
+#if PF_ROMC
+  romc03(system);
+  A = system->dbus;
+#else
+  A = get_immediate(system);
+#endif
 }
 
-/* 21 */
+/**
+ * 21
+ * NI - AND Immediate
+ * An 8-bit value provided by the operand of the NI instruction is ANDed with
+ * the contents of the accumulator. The results are stored in the accumulator.
+ */
 F8_OP(ni)
 {
-   A &= get_immediate(system);
-   add(system, &A, 0);
+#if PF_ROMC
+  romc03(system);
+  A.u &= system->dbus.u;
+#else
+  A.u &= get_immediate(system);
+#endif
+  add(system, &A, 0);
 }
 
-/* 22 */
+/**
+ * 22
+ * OI - OR Immediate
+ * An 8-bit value provided by the operand of the I/O instruction is ORed with
+ * the contents of the accumulator. The results are stored in the accumulator.
+ */
 F8_OP(oi)
 {
-   A |= get_immediate(system);
-   add(system, &A, 0);
+#if PF_ROMC
+  romc03(system);
+  A.u |= system->dbus.u;
+#else
+  A.u |= get_immediate(system);
+#endif
+  add(system, &A, 0);
 }
 
-/* 23 */
+/**
+ * 23
+ * XI - Exclusive-OR Immediate
+ * The contents of the 8-bit value provided by the operand of the XI
+ * instruction are EXCLUSIVE-ORed with the contents of the accumulator.
+ * The results are stored in the accumulator.
+ */
 F8_OP(xi)
 {
-   A ^= get_immediate(system);
-   add(system, &A, 0);
+#if PF_ROMC
+  romc03(system);
+  A.u ^= system->dbus.u;
+#else
+  A.u ^= get_immediate(system);
+#endif
+  add(system, &A, 0);
 }
 
-/* 24 */
+/**
+ * 24
+ * AI - Add Immediate to Accumulator
+ * The 8-bit (two hexadecimal digit) value provided by the instruction operand
+ * is added to the current contents of the accumulator. Binary addition is
+ * performed.
+ */
 F8_OP(ai)
 {
-   add(system, &A, get_immediate(system));
+#if PF_ROMC
+  romc03(system);
+  add(system, &A, system->dbus.u);
+#else
+  add(system, &A, get_immediate(system));
+#endif
 }
 
-/* 25 */
-/* TODO: Subtract function */
+/**
+ * 25
+ * CI - Compare Immediate
+ * The contents of the accumulator are subtracted from the operand of the CI
+ * instruction. The result is not saved but the status bits are set or reset to
+ * reflect the results of the operation.
+ */
 F8_OP(ci)
 {
-   u8 immediate = get_immediate(system);
+  f8_byte immediate;
 
-   add(system, &immediate, ~A + 1);
+  romc03(system);
+  immediate = system->dbus;
+  add(system, &immediate, (~A.u & 0xFF) + 1);
 }
 
-/*
-   26
-   IN (INput from port)
-   Set accumulator to the value of an 8-bit port number
-*/
+/**
+ * 26
+ * IN - Input Long Address
+ * The data input to the I/O port specified by the operand of the IN
+ * instruction is stored in the accumulator.
+ * The I/O port addresses 4 through 255 may be addressed by the IN
+ * instruction.
+ */
 F8_OP(in)
 {
-   u8 port = get_immediate(system) & (IO_PORTS - 1);
+  io_t *io;
 
-   A = system->io[port];
-   add(system, &A, 0);
+#if PF_ROMC
+  /* Apparently only 128 devices can be hooked up, don't know why */
+  romc03(system);
+  W = 0; // todo: why?
+  io = &system->io_ports[system->dbus.u & B01111111];
+#else
+  io = &system->io_ports[get_immediate(system) & 0xFF];
+#endif
+
+  if (io->func_in)
+    io->func_in(io->device_in, &io->data);
+
+#if PF_ROMC
+  romc1b(system);
+#else
+  system->cycles += CYCLE_LONG;
+#endif
+
+  A = io->data;
+  add(system, &A, 0);
 }
 
-/*
-   27
-   OUT (OUTput to port)
-   Set the value of an 8-bit port number to accumulator
-*/
+/**
+ * 27
+ * OUT - Output Long Address
+ * The I/O port addressed by the operand of the OUT instruction is loaded
+ * with the contents of the accumulator.
+ * I/O ports with addresses from 4 through 255 may be accessed with the
+ * OUT instruction.
+ * @todo What happens when 0-3 are addressed?
+ */
 F8_OP(out)
 {
-   u8 port = get_immediate(system) & (IO_PORTS - 1);
+  u8 address;
+  io_t *io;
 
-   system->io[port] = A;
+#if PF_ROMC
+  romc03(system);
+  address = system->dbus.u;
+#else
+  address = get_immediate(system) & 0xFF;
+#endif
+
+#if PF_SAFETY
+  if (address < 4)
+    return;
+#endif
+
+  io = &system->io_ports[address];
+  if (io->func_out)
+    io->func_out(io->device_out, &io->data, A);
+  else
+    io->data = A;
 }
 
-/* 28 */
+/**
+ * 28
+ * PI - Call to Subroutine Immediate
+ * The contents of the Program Counters are stored in the Stack Registers, PC1,
+ * then the then the 16-bit address contained in the operand of the PI
+ * instruction is loaded into the Program Counters. The accumulator is used as
+ * a temporary storage register during transfer of the most significant byte of
+ * the address. Previous accumulator results will be altered.
+ */
 F8_OP(pi)
 {
-   A = get_immediate(system);
-   PC1 = PC0 + 2;//hack
-   PC0 = (get_immediate(system)) & 0xFF;
-   PC0 |= (A << 8);
-   PC0--; //hack
+  romc03(system);
+  A = system->dbus;
+  romc0d(system);
+  romc0c(system);
+  system->dbus = A;
+  romc14(system);
+/*
+  A = get_immediate(system);
+  PC1 = PC0 + 2;//hack
+  PC0 = (get_immediate(system)) & 0xFF;
+  PC0 |= (A << 8);
+  PC0--; //hack
+*/
 }
 
-/* 29 */
+/**
+ * 29
+ * JMP - Branch Immediate
+ * As the result of a JMP instruction execution, a branch to the memory
+ * location addressed by the second and third bytes of the instruction
+ * occurs. The second byte contains the high order eight bits of the
+ * memory address; the third byte contains the low order eight bits of
+ * the memory address.
+ * The accumulator is used to temporarily store the most significant byte
+ * of the memory address; therefore, after the JMP instruction is executed,
+ * the initial contents of the accumulator are lost.
+ */
 F8_OP(jmp)
 {
-   A    = get_immediate(system);
-   PC0  = get_immediate(system);
-   PC0 += A << 8;
-   PC0--; //hack
+#if PF_ROMC
+  romc03(system);
+  A = system->dbus;
+  romc0c(system);
+  system->dbus = A;
+  romc14(system);
+#else
+  A = get_immediate(system);
+  PC0 = get_immediate(system);
+#endif
 }
 
-/* 2A */
+/**
+ * 2A
+ * DCI - Load DC Immediate
+ * The DCI instruction is a three-byte instruction. The contents of the second
+ * byte replace the high order byte of the DC0 registers; the contents of the
+ * third byte replace the low order byte of the DC0 registers.
+ */
 F8_OP(dci)
 {
-   DC0  = get_immediate(system) << 8;
-   DC0 |= get_immediate(system);
+#if PF_ROMC
+  romc11(system);
+  romc03(system);
+  romc0e(system);
+  romc03(system);
+#else
+  DC0 = get_immediate(system) << 8;
+  DC0 |= get_immediate(system);
+#endif
 }
 
-/* 2B */
+/**
+ * 2B
+ * NOP - No Operation
+ * No function is performed.
+ */
 F8_OP(nop)
 {
-   (void)system;
+  /* This does nothing to intentionally silence a warning */
+  (void)system;
 }
 
-/* 2C */
+/**
+ * 2C
+ * XDC - Exchange Data Counters
+ * Execution of the instruction XDC causes the contents of the auxiliary data
+ * counter registers (DC1) to be exchanged with the contents of the data
+ * counter registers (DC0).
+ * This instruction is only significant when a 3852 or 3853 Memory Interface
+ * device is part of the system configuration.
+ * @todo "The PSUs will have DC0 unaltered." ...?
+ */
 F8_OP(xdc)
 {
-   DC0 ^= DC1;
-   DC1 ^= DC0;
-   DC0 ^= DC1;
+#if PF_ROMC
+  romc1d(system);
+#else
+  unsigned temp = DC0;
+
+  DC0 = DC1;
+  DC1 = temp;
+  system->cycles += CYCLE_SHORT;
+#endif
 }
 
-/* 30 - 3F */
-/* DS r: Decrease scratchpad byte addressed by ISAR */
+/**
+ * 30 - 3F
+ * DS - Decrease Scratchpad Content
+ * The content of the scratchpad register addressed by the operand (Sreg) is
+ * decremented by one binary count. The decrement is performed by adding H'FF'
+ * to the scratchpad register.
+ * @todo Macro and unroll this
+ */
 F8_OP(ds)
 {
-   u8 *address = isar(system);
+  f8_byte *address = isar(system);
 
-   if (address != NULL)
-      add(system, address, 0xFF);
+  if (address != NULL)
+    add(system, address, 0xFF);
 }
 
-/* 40 - 4F */
+/**
+ * 40 - 4F
+ * LR A, r - Load Register
+ */
 F8_OP(lr_a_r)
 {
-   u8 *address = isar(system);
+  f8_byte *address = isar(system);
 
-   if (address != NULL)
-      lr(&A, address);
+  if (address)
+    A = *address;
 }
 
-/* 50 - 5F */
+/**
+ * 50 - 5F
+ * LR r, A - Load Register
+ */
 F8_OP(lr_r_a)
 {
-   u8 *address = isar(system);
+  f8_byte *address = isar(system);
 
-   if (address != NULL)
-      lr(address, &A);
+  if (address)
+    *address = A;
 }
 
-/* 60 - 67 */
+/**
+ * 60 - 67
+ * LISU - Load Upper Octal Digit of ISAR
+ * A 3-bit value provided by the LISU instruction operand is loaded into the
+ * three most significant bits of the ISAR. The three least significant bits
+ * of the ISAR are not altered.
+ */
 F8_OP(lisu)
 {
-   u8 immediate = ((current_op(system) & 0x07) << 3) & 0x38;
+  unsigned immediate = system->dbus.u & B00000111;
 
-   /* Mask to lower 3 bits, load new upper */
-   ISAR &= 0x07;
-   ISAR |= immediate;
+  /* Mask to lower 3 bits, load new upper */
+  ISAR &= B00000111;
+  ISAR |= immediate << 3;
 }
 
-/* 68 - 6F */
+/**
+ * 68 - 6F
+ * LISL - Load Lower Octal Digit of ISAR
+ * A 3-bit value provided by the LISL instruction operand is loaded into the
+ * three least significant bits of the ISAR. The three most significant bits
+ * of the ISAR are not altered.
+ */
 F8_OP(lisl)
 {
-   u8 immediate = current_op(system) & 0x07;
+  unsigned immediate = system->dbus.u & B00000111;
 
-   /* Mask to upper 3 bits, load new lower */
-   ISAR &= 0x38;
-   ISAR |= immediate;
+  /* Mask to upper 3 bits, load new lower */
+  ISAR &= B00111000;
+  ISAR |= immediate;
 }
 
-/* 70 */
-F8_OP(clr)
-{
-   A = 0;
-}
+/**
+ * 70
+ * CLR - Clear Accumulator
+ * The contents of the accumulator are set to zero.
+ */
 
-/* 71 - 7F */
-F8_OP(lis)
-{
-   A = current_op(system) & 0x0F;
-}
+/**
+ * 71 - 7F
+ * LIS - Load Immediate Short
+ * A 4-bit value provided by the LIS instruction operand is loaded into the
+ * four least significant bits of the accumulator. The most significant four
+ * bits of the accumulator are set to ''0''.
+ */
 
-/* 80 - 87 */
-F8_OP(bt_n)
-{
-   if (current_op(system) & W)
-      PC0 += next_op(system);
-   else
-      PC0++;
-}
+#define F8_OP_LIS(a) F8_OP(lis##a) { A.u = a; }
+F8_OP_LIS(0)
+F8_OP_LIS(1)
+F8_OP_LIS(2)
+F8_OP_LIS(3)
+F8_OP_LIS(4)
+F8_OP_LIS(5)
+F8_OP_LIS(6)
+F8_OP_LIS(7)
+F8_OP_LIS(8)
+F8_OP_LIS(9)
+F8_OP_LIS(10)
+F8_OP_LIS(11)
+F8_OP_LIS(12)
+F8_OP_LIS(13)
+F8_OP_LIS(14)
+F8_OP_LIS(15)
 
-/* 88 */
+#if PF_ROMC
+#define F8_OP_BT(a) \
+  F8_OP(bt##a) \
+  { \
+    romc1c(system); \
+    if (a & W) \
+      romc01(system); \
+    else \
+      romc03(system); \
+  }
+#else
+#endif
+
+/**
+ * 80
+ * BT0 - Do Not Branch
+ * An effective 3-cycle NO-OP
+ */
+F8_OP_BT(0)
+
+/**
+ * 81
+ * BT1 / BP - Branch if Positive
+ */
+F8_OP_BT(1)
+
+/**
+ * 82
+ * BT2 / BC - Branch on Carry
+ */
+F8_OP_BT(2)
+
+/**
+ * 83
+ * BT3 - Branch if Positive or on Carry
+ */
+F8_OP_BT(3)
+
+/**
+ * 84
+ * BT4 / BZ - Branch if Zero
+ */
+F8_OP_BT(4)
+
+/**
+ * 85
+ * BT5 - Branch if Positive
+ * Same function as BP
+ */
+F8_OP_BT(5)
+
+/**
+ * 86
+ * BT6 - Branch if Zero or on Carry
+ */
+F8_OP_BT(6)
+
+/**
+ * BT7 - Branch if Positive or on Carry
+ * Same function as BT3
+ */
+F8_OP_BT(7)
+
+/**
+ * 88
+ * AM - Add (Binary) Memory to Accumulator
+ * The content of the memory location addressed by the DC0 registers is added
+ * to the accumulator. The sum is returned in the accumulator. Memory is not
+ * altered. Binary addition is performed. The contents of the DC0 registers
+ * are incremented by 1.
+ */
 F8_OP(am)
 {
-   add(system, &A, get_rom(system, DC0));
-   DC0++;
+#if PF_ROMC
+  romc02(system);
+  add(system, &A, system->dbus.s);
+#else
+  add(system, &A, get_rom(system, DC0));
+  DC0++;
+#endif
 }
 
-/* 89 */
+/**
+ * 89
+ * AMD - Add Decimal Accumulator with Memory
+ * The accumulator and the memory location addressed by the DC0 registers are
+ * assumed to contain two BCD digits. The content of the address memory byte
+ * is added to the contents of the accumulator to give a BCD result in the
+ * accumulator.
+ */
 F8_OP(amd)
 {
-   add_bcd(system, &A, get_rom(system, DC0));
-   DC0++;
+  romc02(system);
+  add_bcd(system, &A, system->dbus.s);
 }
 
-/* 8A */
+/**
+ * 8A
+ * NM - Logical AND from Memory
+ * The content of memory addressed by the data counter registers is ANDed with
+ * the content of the accumulator. The results are stored in the accumulator.
+ * The contents of the data counter registers are incremented.
+ */
 F8_OP(nm)
 {
-   A &= get_rom(system, DC0);
-   DC0++;
-   add(system, &A, 0);
+  romc02(system);
+  A.u &= system->dbus.u;
+  update_status(system);
 }
 
-/* 8B */
+/**
+ * 8B
+ * OM - Logical OR from Memory
+ * The content of memory byte addressed by...
+ * @todo write
+ */
 F8_OP(om)
 {
-   A |= get_rom(system, DC0);
-   DC0++;
-   add(system, &A, 0);
+  romc02(system);
+  A.u |= system->dbus.u;
+  update_status(system);
 }
 
-/* 8C */
+/**
+ * 8C
+ * XM - Exclusive OR from Memory
+ * @todo write
+ */
 F8_OP(xm)
 {
-   A ^= get_rom(system, DC0);
-   DC0++;
-   add(system, &A, 0);
+  romc02(system);
+  A.u ^= system->dbus.u;
+  update_status(system);
 }
 
-/* 8D */
+/**
+ * 8D
+ * CM - Compare Memory to Accumulator
+ * The CM instruction is the same is the same as the CI instruction except the
+ * memory contents addressed by the DC0 registers, instead of an immediate
+ * value, are compared to the contents of the accumulator.
+ * Memory contents are not altered. Contents of the DC0 registers are
+ * incremented.
+ */
 F8_OP(cm)
 {
-   u8 temp = get_rom(system, DC0);
+  f8_byte temp;
 
-   add(system, &temp, ~A + 1);
-   DC0++;
+  romc02(system);
+  temp = system->dbus;
+  add(system, &temp, -A.s);
 }
 
-/* 8E */
+/**
+ * 8E
+ * ADC - Add Accumulator to Data Counter
+ * The contents of the accumulator are treated as a signed binary number, and
+ * are added to the contents of every DC0 register. The result is stored in the
+ * DC0 registers. The accumulator contents do not change.
+ * No status bits are modified.
+ */
 F8_OP(adc)
 {
-   i32 adc;
-
-   if (A & 0x80)
-      adc = -1 - (A ^ 0xFF);
-   else
-      adc = A & 0xFF;
-
-   DC0 += adc;
+#if PF_ROMC
+  system->dbus = A;
+  romc0a(system);
+#else
+  DC0 += A;
+#endif
 }
 
-/* 8F */
+/**
+ * 8F
+ * BR7 - Branch on ISAR
+ * Branch will occur if any of the low 3 bits of ISAR are reset.
+ */
 F8_OP(br7)
 {
-   if ((ISAR & 7) != 7)
-      PC0 += (i8)next_op(system);
-   else
-      PC0++;
+#if PF_ROMC
+  romc03(system);
+  if ((ISAR & B00000111) != B00000111)
+    romc01(system);
+#else
+  if ((ISAR & 7) != 7)
+    PC0 += (i8)next_op(system);
+  else
+    PC0++;
+#endif
 }
 
-/* 90 - 9F */
+/**
+ * 90 - 9F
+ * BF - Branch on False
+ */
 F8_OP(bf)
 {
-   if (((current_op(system) & 0x0F) & W) == 0)
-      PC0 += (i8)next_op(system);
-   else
-      PC0++;
+#if PF_ROMC
+  /* Wait? */
+  romc1c(system);
+  if (!((system->dbus.u & B00001111) & W))
+    romc01(system);
+  else
+    romc03(system);
+#endif
 }
 
-/*
-   A0 - AF
-   INS (INput from port (Short))
-   Set accumulator to the value of a four-bit port number
-*/
+/**
+ * A0 - AF
+ * INS - Input Short Address
+ * Data input to the I/O port specified by the operand of the INS instruction
+ * is loaded into the accumulator. An I/O port with an address within the
+ * range 0 through 15 may be accessed by this instruction.
+ * If an I/O port or pin is being used for both input and output, the port or
+ * pin previously used for output must be cleared before it can be used to
+ * input data.
+ */
 F8_OP(ins)
 {
-   u32 port = current_op(system) & 0x0F;
+#if PF_ROMC
+  io_t *io = &system->io_ports[system->dbus.u & B00001111];
 
-   if (port == 0)
-      system->io[0] = get_input(0);
-   else if (system->io[1] == 0 && port == 1)
-      system->io[1] = get_input(1);
-   else if (system->io[4] == 0 && port == 4)
-      system->io[4] = get_input(4);
+  if (io->func_in)
+    io->func_in(io->device_in, &io->data);
 
-   A = system->io[port];
-   add(system, &A, 0);
+  A = io->data;
+  add(system, &A, 0);
+#else
+  if (port == 0)
+    system->io[0] = get_input(0);
+  else if (system->io[1] == 0 && port == 1)
+    system->io[1] = get_input(1);
+  else if (system->io[4] == 0 && port == 4)
+    system->io[4] = get_input(4);*/
+#endif
 }
 
-/*
-   B0 - BF
-   OUTS (OUTput to port (Short))
-   Set the value of a four-bit port number to the accumulator
-*/
+/**
+ * B0 - BF
+ * OUTS - Output Short Address
+ * The I/O port addressed by the operand of the OUTS instruction object code
+ * is loaded with the contents of the accumulator. I/O ports with addresses
+ * from 0 to 15 may be accessed by this instruction. The I/O port addresses
+ * are defined in Table 6-6. Outs 0 or 1 is CPU port only.
+ * No status bits are modified.
+ */
 F8_OP(outs)
 {
-   u8 port = current_op(system) & 0x0F;
+#if PF_ROMC
+  io_t *io = &system->io_ports[system->dbus.u & B00001111];
+
+  romc1c(system);
+
+  if (io->func_out)
+    io->func_out(io->device_out, &io->data, A);
+  else
+    io->data = A;
+#else
+   /*u8 port = current_op(system) & 0x0F;
    u8 temp = system->io[port];
 
    system->io[port] = A;
-   /* Hack for testing, remove this */
+    Hack for testing, remove this
    if (port == 0 && (temp == 0x60) && (A == 0x40 || A == 0x50))
    {
       u8 x, y;
@@ -719,19 +1169,25 @@ F8_OP(outs)
    }
    else if (port == 5)
       sound_push_back(system->io[5] >> 6, system->cycles, system->total_cycles);
+   */
+#endif
 }
 
-/*
-   C0 - CF
-   AS (Add Source)
-   Add a register to the accumulator.
-*/
+/**
+ * C0 - CF
+ * AS - Binary Addition, Scratchpad Memory to Accumulator
+ * The content of the scratchpad register referenced by the instruction
+ * operand (Sreg) is added to the accumulator using binary addition. The
+ * result of the binary addition is stored in the accumulator. The scratchpad
+ * register contents remain unchanged. Depending on the value of Sreg, ISAR
+ * may be unaltered, incremented, or decremented.
+ */
 F8_OP(as)
 {
-   u8 *address = isar(system);
+  f8_byte *reg = isar(system);
 
-   if (address != NULL)
-      add(system, &A, *address);
+  if (reg != NULL)
+    add(system, &A, reg->u);
 }
 
 /*
@@ -741,10 +1197,12 @@ F8_OP(as)
 */
 F8_OP(asd)
 {
-   u8 *address = isar(system);
+  f8_byte *reg = isar(system);
 
-   if (address != NULL)
-      add_bcd(system, &A, *address);
+  romc1c(system);
+
+  if (reg != NULL)
+    add_bcd(system, &A, reg->u);
 }
 
 /*
@@ -754,13 +1212,13 @@ F8_OP(asd)
 */
 F8_OP(xs)
 {
-   u8 *address = isar(system);
+  f8_byte *address = isar(system);
 
-   if (address != NULL)
-   {
-      A ^= *address;
-      add(system, &A, 0);
-   }
+  if (address != NULL)
+  {
+    A.u ^= address->u;
+    update_status(system);
+  }
 }
 
 /*
@@ -770,25 +1228,49 @@ F8_OP(xs)
 */
 F8_OP(ns)
 {
-   u8 *address = isar(system);
+  f8_byte *address = isar(system);
 
-   if (address != NULL)
-   {
-      A &= *address;
-      add(system, &A, 0);
-   }
+  if (address != NULL)
+  {
+    A.u &= address->u;
+    update_status(system);
+  }
+}
+
+/**
+ * 2D - 2F
+ * Invalid / Undefined opcode
+ */
+F8_OP(invalid)
+{
+  nop(system);
 }
 
 /*
-   2D - 2F
-   Invalid / Undefined opcode
-*/
-F8_OP(invalid_opcode)
+typedef void F8_OP_T(f8_system_t*);
+static F8_OP_T *guh[256] =
 {
-   nop(system);
-}
+  lr_a_dpchr, lr_a_dpchr, lr_a_dpchr, lr_a_dpchr,
+  lr_dpchr_a, lr_dpchr_a, lr_dpchr_a, lr_dpchr_a,
+  lr_k_pc1,   lr_pc1_k,   lr_a_isar,  lr_isar_a,
+  pk,         lr_pc0_q,   lr_q_dc0,   lr_dc0_q,
 
-u8 pressf_init(channelf_t *system)
+  lr_dc0_h,   lr_h_dc0,   sr_a,       sl_a,
+  sr_a_4,     sl_a_4,     lm,         st,
+  com,        lnk,        di,         ei,
+  pop,        lr_w_j,     lr_j_w,     inc,
+
+  li,         ni,         oi,         xi,
+  ai,         ci,         in,         out,
+  pi,         jmp,        dci,        nop,
+  xdc,        invalid,    invalid,    invalid,
+
+  ds0, ds1, ds2, ds3, ds4, ds5, ds6, ds7,
+  ds8, ds9, ds10, ds11, ds12, ds13, ds14, ds15,
+};
+*/
+
+u8 pressf_init(f8_system_t *system)
 {
    u32 i = 0;
 
@@ -810,14 +1292,12 @@ u8 pressf_init(channelf_t *system)
    {
       operations[0x60 + i] = lisu;
       operations[0x68 + i] = lisl;
-      operations[0x80 + i] = bt_n;
    }
    for (i = 0x00; i < 0x10; i++)
    {
       operations[0x30 + i] = ds;
       operations[0x40 + i] = lr_a_r;
       operations[0x50 + i] = lr_r_a;
-      operations[0x70 + i] = lis;
       operations[0x90 + i] = bf;
       operations[0xA0 + i] = ins;
       operations[0xB0 + i] = outs;
@@ -856,11 +1336,36 @@ u8 pressf_init(channelf_t *system)
    operations[0x2A] = dci;
    operations[0x2B] = nop;
    operations[0x2C] = xdc;
-   operations[0x2D] = invalid_opcode;
-   operations[0x2E] = invalid_opcode;
-   operations[0x2F] = invalid_opcode;
+   operations[0x2D] = invalid;
+   operations[0x2E] = invalid;
+   operations[0x2F] = invalid;
 
-   operations[0x70] = clr;
+   operations[0x70] = lis0;
+   operations[0x71] = lis1;
+   operations[0x72] = lis2;
+   operations[0x73] = lis3;
+   operations[0x74] = lis4;
+   operations[0x75] = lis5;
+   operations[0x76] = lis6;
+   operations[0x77] = lis7;
+   operations[0x78] = lis8;
+   operations[0x79] = lis9;
+   operations[0x7A] = lis10;
+   operations[0x7B] = lis11;
+   operations[0x7C] = lis12;
+   operations[0x7D] = lis13;
+   operations[0x7E] = lis14;
+   operations[0x7F] = lis15;
+
+   operations[0x80] = bt0;
+   operations[0x81] = bt1;
+   operations[0x82] = bt2;
+   operations[0x83] = bt3;
+   operations[0x84] = bt4;
+   operations[0x85] = bt5;
+   operations[0x86] = bt6;
+   operations[0x87] = bt7;
+
    operations[0x88] = am;
    operations[0x89] = amd;
    operations[0x8A] = nm;
@@ -870,76 +1375,73 @@ u8 pressf_init(channelf_t *system)
    operations[0x8E] = adc;
    operations[0x8F] = br7;
 
-   operations[0x3F] = invalid_opcode;
-   operations[0x4F] = invalid_opcode;
-   operations[0x5F] = invalid_opcode;
-   operations[0xCF] = invalid_opcode;
-   operations[0xDF] = invalid_opcode;
-   operations[0xEF] = invalid_opcode;
-   operations[0xFF] = invalid_opcode;
+   operations[0x3F] = invalid;
+   operations[0x4F] = invalid;
+   operations[0x5F] = invalid;
+   operations[0xCF] = invalid;
+   operations[0xDF] = invalid;
+   operations[0xEF] = invalid;
+   operations[0xFF] = invalid;
 
-   memset(system->c3850.scratchpad, 0xFF, SCRATCH_SIZE);
    system->total_cycles = 30000;
 
-   return pressf_load_rom(system);
-}
-
-u8 pressf_load_rom(channelf_t *system)
-{
-   u32 i = 0;
-
-   free(system->functions);
-   system->functions = calloc(ROM_CART_SIZE + ROM_BIOS_SIZE * 2, sizeof(void(*)(channelf_t*)));
-   for (i = 0; i < ROM_CART_SIZE + ROM_BIOS_SIZE * 2; i++)
-   {
-      /* Set pointers to all implemented HLE functions */
-      system->functions[i] = hle_get_func_from_addr(i);
-      if (system->functions[i] == NULL)
-         system->functions[i] = operations[system->rom[i]];
-      else
-         printf("HLE function found: %04lX - %p\n", i, system->functions[i]);
-   }
-   pressf_reset(system);
+   f3850_init(&system->f8devices[0]);
 
    return TRUE;
 }
 
-/* TODO: Add SAFETY checks here */
-void pressf_step(channelf_t *system)
+/**
+ * Has the F8 system execute one instruction.
+ **/
+void pressf_step(f8_system_t *system)
 {
-#if PF_DEBUGGER == TRUE
-    if (debug_should_break(PC0))
-      return;
+#if PF_HAVE_HLE_BIOS
+  void (*hle_func)() = hle_get_func_from_addr(PC0);
 #endif
 
-    system->functions[system->pc0](system);
-    PC0++;
-}
-
-u8 pressf_run(channelf_t *system)
-{
-#ifdef PRESS_F_SAFETY
-   if (!system)
-      return FALSE;
+#if 0//PF_DEBUGGER == TRUE
+  if (debug_should_break(PC0))
+    return;
 #endif
 
-   system->cycles = 0;
-   do
-   {
-      pressf_step(system);
-      system->cycles += 10;
-   } while (system->total_cycles > system->cycles);
-
-   return TRUE;
-}
-
-void pressf_reset(channelf_t *system)
-{
-   if (system)
-   {
-      PC0 = 0;
-      PC1 = 0;
-   }
-}
-
+#if PF_ROMC
+  romc00(system);
+#else
+  PC0++;
 #endif
+#if PF_HAVE_HLE_BIOS
+  if (hle_func)
+  {
+    hle_func(system);
+    return;
+  }
+#endif
+  operations[system->dbus.u](system);
+}
+
+u8 pressf_run(f8_system_t *system)
+{
+#if PRESS_F_SAFETY
+  if (!system)
+    return FALSE;
+#endif
+
+  system->cycles -= system->total_cycles;
+  if (system->cycles < 0)
+    system->cycles = 0;
+  do
+  {
+    pressf_step(system);
+  } while (system->total_cycles > system->cycles);
+
+  return TRUE;
+}
+
+void pressf_reset(f8_system_t *system)
+{
+  if (system)
+  {
+    PC0 = 0;
+    PC1 = 0;
+  }
+}

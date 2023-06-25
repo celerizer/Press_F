@@ -6,48 +6,57 @@
 #include "hle.h"
 #include "screen.h"
 
-#define HLE(a) void a(channelf_t *system)
+#define HLE(a) void a(f8_system_t *system)
 
 /* 0000 */
 HLE(reset)
 {
-   system->c3850.accumulator = 0;
+  f8_main_cpu(system)->accumulator.u = 0;
 }
 
 /* 0001 - 0019 */
+/*
 HLE(init)
 {
-   /* 0001 - 0009 */
-   /* Reset all scratchpad registers to 00 */
-   memset(system->c3850.scratchpad, 0, SCRATCH_SIZE);
+  f3850_t *cpu = f8_main_cpu(system);
+  u8 check_byte;
 
-   /* 000A - 000E */
-   /* Initialize the stack pointer */
-   system->c3850.accumulator = 40;
-   system->c3850.scratchpad[59] = 40;
+  /* 0001 - 0009
+  /* Reset all scratchpad registers to 00
+  memset(cpu->scratchpad, 0, SCRATCH_SIZE);
 
-   /* 000F - 0019 */
-   /* Jump to either the built-in game or the inserted cartridge */
-   if (system->rom[0x0800] != 0x55)
-      system->pc0 = 0x001A - 1;
-   else
-      system->pc0 = 0x0802 - 1;
+  /* 000A - 000E
+  /* Initialize the stack pointer
+  cpu->accumulator.u = 40;
+  cpu->scratchpad[59].u = 40;
+
+  /* 000F - 0019 */
+  /* Jump to either the built-in game or the inserted cartridge
+  if (!f8_read(system, &check_byte, 0x0800, 1) || check_byte != 0x55)
+    system->pc0 = 0x001A - 1;
+  else
+    system->pc0 = 0x0802 - 1;
 }
+*/
 
 /* 001A - 001F */
+/*
 HLE(no_cart_init)
 {
-   /* Run the screen clear routine */
-   system->c3850.scratchpad[0x03] = 0xD6;
-   system->pc0 = 0x00D0 - 1;
+  /* Run the screen clear routine
+  f8_main_cpu(system)->scratchpad[0x03].u = 0xD6;
+  system->pc0 = 0x00D0 - 1;
 }
+*/
 
 /* 00D0 - 00D5 */
+/*
 HLE(clear_screen)
 {
-   memset(system->vram, 0x0, sizeof(system->vram));
-   system->pc0 = system->pc1 - 1;
+  memset(system->vram, 0, sizeof(system->vram));
+  system->pc0 = system->pc1 - 1;
 }
+*/
 
 /*
    push_k
@@ -57,16 +66,18 @@ HLE(clear_screen)
    ---
    Modifies: R7
 */
+/*
 HLE(push_k)
 {
-   u8 stack = system->c3850.scratchpad[59] & 0x3F;
+   u8 stack = f8_main_cpu(system)->scratchpad[59] & 0x3F;
 
-   system->c3850.scratchpad[7] = system->c3850.isar;
-   memcpy(&system->c3850.scratchpad[stack], &system->c3850.scratchpad[12], 2);
-   system->c3850.scratchpad[59] = stack + 2;
+   f8_main_cpu(system)->scratchpad[7] = f8_main_cpu(system)->isar;
+   memcpy(&f8_main_cpu(system)->scratchpad[stack], &f8_main_cpu(system)->scratchpad[12], 2);
+   f8_main_cpu(system)->scratchpad[59] = stack + 2;
 
    system->pc0 = system->pc1 - 1;
 }
+*/
 
 /*
    pop_k
@@ -76,6 +87,7 @@ HLE(push_k)
    ---
    Modifies: R7
 */
+/*
 HLE(pop_k)
 {
    u8 stack = (system->c3850.scratchpad[59] & 0x3F) - 2;
@@ -86,6 +98,7 @@ HLE(pop_k)
 
    system->pc0 = system->pc1 - 1;
 }
+*/
 
 /*
    drawchar
@@ -98,6 +111,7 @@ HLE(pop_k)
    R1          = x position
    R2          = y position
 */
+/*
 HLE(drawchar)
 {
    u8 *character = &system->rom[(system->dc0 + system->c3850.scratchpad[0]) & 0x3F];
@@ -121,6 +135,7 @@ HLE(drawchar)
    }
    system->pc0 = system->pc1 - 1;
 }
+*/
 
 /*
    drawchar_sys
@@ -133,11 +148,13 @@ HLE(drawchar)
    R1          = x position
    R2          = y position
 */
+/*
 HLE(drawchar_sys)
 {
    system->dc0 = 0x0767;
    drawchar(system);
 }
+*/
 
 void* hle_get_func_from_addr(u16 address)
 {

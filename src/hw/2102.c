@@ -2,11 +2,13 @@
 #define PRESS_F_2102_C
 
 #include <stdlib.h>
+#include <string.h>
 
-#include "f8_device.h"
 #include "2102.h"
 
-/* Fairchild 2102/2102L (1024 x 1 Static RAM) */
+static const char *name = "Fairchild 2102/2102L (1024 x 1 Static RAM)";
+static int type = F8_DEVICE_2102;
+
 /*    ==================    */
 /* A6 ||  1        16 || A7 */
 /* A5 ||  2        15 || A6 */
@@ -24,75 +26,86 @@
 /* port a (p20) OUT  -   -   -  IN  A2  A3  RW */
 /* port b (p21) A9  A8  A7  A1  A6  A5  A4  A0 */
 
-/* Used for the last 2 addressing bits and to send/receive data */
-/* --- */
-/* Hooked to port 25 on Videocart 10 */
-/* Hooked to port 21 on Videocart 18 */
-
 #define BIT_RW  B00000001
 #define BIT_IN  B00001000
 #define BIT_OUT B10000000
-void f2012_function_a(f8_device_t *device, u8 *port_data)
+
+/**
+ * Used for the last 2 addressing bits and to send/receive data.
+ * Hooked to port 25 on Videocart 10
+ * Hooked to port 21 on Videocart 18
+ */
+F8D_OP_OUT(f2102_write)
 {
-   f2102_t *m_f2102 = (f2102_t*)device->device;
-   u8 *address;
-   int bit;
+  f2102_t *m_f2102 = (f2102_t*)device->device;
+  u16 address = 0;
+  const unsigned addr_io_a = m_f2102->io_address->u;
+  unsigned addr_io_b = value.u;
+  f8_byte *data;
+  int bit;
 
-   /* The other function handles all addressing bits besides 2 and 3 */
-   m_f2102->selected_address &= B11110011;
- 
-   /* P2 -> A2 */
-   m_f2102->selected_address |= (*port_data & B00000100);
-   /* P1 -> A3 */
-   m_f2102->selected_address |= (*port_data & B00000010) << 2;
+  /* Rearrange the other bits into this weird order */
+  /* P0 -> A0 */
+  address |= (addr_io_a & B00000001);
+  /* P4 -> A1 */
+  address |= (addr_io_a & B00010000) >> 3;
+  /* P1 -> A4 */
+  address |= (addr_io_a & B00000010) << 3;
+  /* P2 -> A5 */
+  address |= (addr_io_a & B00000100) << 3;
+  /* P3 -> A6 */
+  address |= (addr_io_a & B00001000) << 3;
+  /* P5 -> A7 */
+  address |= (addr_io_a & B00100000) << 2;
+  /* P6 -> A8 */
+  address |= (addr_io_a & B01000000) << 2;
+  /* P7 -> A9 */
+  address |= (addr_io_a & B10000000) << 2;
 
-   address = &device->data[m_f2102->selected_address / 8];
-   bit     = (1 << (m_f2102->selected_address % 8));
+  /* P2 -> A2 */
+  address |= (addr_io_b & B00000100);
+  /* P1 -> A3 */
+  address |= (addr_io_b & B00000010) << 2;
 
-   /* Are we writing data? */
-   if (*port_data & BIT_RW)
-      *address = (*port_data & BIT_IN) ? (*address & bit) : (*address & ~bit);
-   else
-      *port_data = (*address & bit) ? (*port_data & BIT_OUT) : (*port_data & ~BIT_OUT);
-}
+  data = &device->data[address / 8];
+  bit = (1 << (address % 8));
 
-/* Used to set 8 of the addressing bits. Does not modify port data. */
-/* --- */
-/* Hooked to port 24 on Videocart 10 */
-/* Hooked to port 20 on Videocart 18 */
-void f2012_function_b(f8_device_t *device, u8 *port_data)
-{
-   f2102_t *m_f2102 = (f2102_t*)device;
-   u8 data = *port_data;
-
-   /* The other function handles addressing bits 2 and 3 */
-   m_f2102->selected_address &= B00001100;
-
-   /* Rearrange the other bits into this weird order */
-   /* P0 -> A0 */
-   m_f2102->selected_address |=  data & B00000001;
-   /* P4 -> A1 */
-   m_f2102->selected_address |= (data & B00010000) >> 3;
-   /* P1 -> A4 */
-   m_f2102->selected_address |= (data & B00000010) << 3;
-   /* P2 -> A5 */
-   m_f2102->selected_address |= (data & B00000100) << 3;
-   /* P3 -> A6 */
-   m_f2102->selected_address |= (data & B00001000) << 3;
-   /* P5 -> A7 */
-   m_f2102->selected_address |= (data & B00100000) << 2;
-   /* P6 -> A8 */
-   m_f2102->selected_address |= (data & B01000000) << 2;
-   /* P7 -> A9 */
-   m_f2102->selected_address |= (data & B10000000) << 2;
+  /* Are we writing data? */
+  if (addr_io_b & BIT_RW)
+    data->u = (addr_io_b & BIT_IN) ? (data->u & bit) : (data->u & ~bit);
+  /* No, we're reading it. */
+  else
+    io_data->u = (data->u & bit) ? (addr_io_b & BIT_OUT) : (addr_io_b & ~BIT_OUT);
 }
 
 void f2102_init(f8_device_t *device)
 {
-   f2102_t *m_f2102 = (f2102_t*)device->device;
+   if (!device)
+     return;
+   else
+   {
+     device->device = (f2102_t*)calloc(sizeof(f2102_t), 1);
+     device->name = name;
+     device->type = type;
+   }
+}
 
-   m_f2102 = (f2102_t*)malloc(sizeof(f2102_t));
-   device->data = (u8*)calloc(F2102_SIZE, 1);
+void f2012_serialize(void *buffer, unsigned size, unsigned *offset, f8_device_t *device)
+{
+  f2102_t *m_f2102 = (f2102_t*)device->device;
+
+  //if (buffer)
+  //  memcpy(buffer + *offset, m_f2102->data, sizeof(f2102_t));
+  *offset += sizeof(f2102_t);
+}
+
+void f2102_unserialize(void *buffer, unsigned size, unsigned *offset, f8_device_t *device)
+{
+  f2102_t *m_f2102 = (f2102_t*)device->device;
+
+  //if (buffer)
+  //  memcpy(m_f2102->data, buffer + *offset, sizeof(f2102_t));
+  *offset += sizeof(f2102_t);
 }
 
 #endif

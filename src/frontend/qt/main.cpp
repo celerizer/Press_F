@@ -5,7 +5,7 @@
 #include "main.h"
 #include "mainwindow.h"
 
-channelf_t g_ChannelF;
+f8_system_t g_ChannelF;
 
 int main(int argc, char *argv[])
 {

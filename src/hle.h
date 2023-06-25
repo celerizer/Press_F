@@ -1,7 +1,7 @@
 #ifndef PRESS_F_HLE_H
 #define PRESS_F_HLE_H
 
-#include "hw/channelf.h"
+#include "hw/system.h"
 
 /*
    Return the HLE function pointer for a given BIOS address, or NULL if one

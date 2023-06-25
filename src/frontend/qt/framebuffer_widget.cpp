@@ -9,6 +9,7 @@
 extern "C"
 {
   #include "../../screen.h"
+  #include "../../hw/vram.h"
 }
 
 QPfFramebuffer::QPfFramebuffer(QWidget *parent) : QWidget(parent)
@@ -32,7 +33,7 @@ void QPfFramebuffer::paintEvent(QPaintEvent *event)
   QPainter painter(this);
 
   Q_UNUSED(event)
-  draw_frame_rgb565(g_ChannelF.vram, reinterpret_cast<u16*>(m_Texture.bits()));
+  draw_frame_rgb565(((vram_t*)g_ChannelF.f8devices[3].device)->data, reinterpret_cast<u16*>(m_Texture.bits()));
   painter.drawImage(m_Rect, m_Texture);
 }
 

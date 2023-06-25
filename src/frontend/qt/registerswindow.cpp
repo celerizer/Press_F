@@ -89,6 +89,7 @@ void RegisterLineEdit::onRefresh16Bit()
 
 RegistersWindow::RegistersWindow()
 {
+    /*
   char temp_string[256];
   u32 i, j;
 
@@ -149,7 +150,7 @@ RegistersWindow::RegistersWindow()
     for (j = 0; j < 8; j++)
       m_ScratchpadTable->setItem(i, j, new QTableWidgetItem());
 
-  /* Finalize window layout */
+  /* Finalize window layout
   QGridLayout *layout = new QGridLayout;
   layout->addWidget(m_CommandsList,       0, 0, 2, 1);
   layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
@@ -160,6 +161,7 @@ RegistersWindow::RegistersWindow()
   m_Timer = new QTimer(this);
   m_Timer->start(10);
   connect(m_Timer, SIGNAL(timeout()), this, SLOT(onRefresh()));
+  */
 }
 
 void RegistersWindow::onClickCommand(int Row, int Column, int PreRow, int PreColumn)
@@ -167,12 +169,12 @@ void RegistersWindow::onClickCommand(int Row, int Column, int PreRow, int PreCol
   Q_UNUSED(Column)
   Q_UNUSED(PreRow)
   Q_UNUSED(PreColumn)
-  m_CommandDescription->setText(opcodes[g_ChannelF.rom[Row]].description);
+  //m_CommandDescription->setText(opcodes[g_ChannelF.rom[Row]].description);
 }
 
 void RegistersWindow::onRefresh()
 {
-  QTableWidgetItem *item;
+  /*QTableWidgetItem *item;
   u8 i, j;
 
   for (i = 0; i < 8; i++)
@@ -184,12 +186,12 @@ void RegistersWindow::onRefresh()
     }
   }
 
-  /* Highlight ISAR pointer in blue */
+  /* Highlight ISAR pointer in blue
   i = g_ChannelF.c3850.isar / 8;
   j = g_ChannelF.c3850.isar - i * 8;
   m_ScratchpadTable->item(i, j)->setBackground(Qt::blue);
 
-  /* Highlight stack usage in pink */
+  /* Highlight stack usage in pink
   i = g_ChannelF.c3850.scratchpad[59];
   while (i > 40)
   {
@@ -203,6 +205,7 @@ void RegistersWindow::onRefresh()
     else
       break;
   }
+  */
 }
 
 #endif
