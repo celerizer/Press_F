@@ -634,7 +634,7 @@ F8_OP(in)
 #if PF_ROMC
   /* Apparently only 128 devices can be hooked up, don't know why */
   romc03(system);
-  W = 0; // todo: why?
+  W = 0; /* todo: why? */
   io = &system->io_ports[system->dbus.u & B01111111];
 #else
   io = &system->io_ports[get_immediate(system) & 0xFF];
@@ -1399,7 +1399,7 @@ void pressf_step(f8_system_t *system)
   void (*hle_func)() = hle_get_func_from_addr(PC0);
 #endif
 
-#if 0//PF_DEBUGGER == TRUE
+#if PF_DEBUGGER
   if (debug_should_break(PC0))
     return;
 #endif

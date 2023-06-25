@@ -92,20 +92,24 @@ void f2102_init(f8_device_t *device)
 
 void f2012_serialize(void *buffer, unsigned size, unsigned *offset, f8_device_t *device)
 {
+  /*
   f2102_t *m_f2102 = (f2102_t*)device->device;
 
-  //if (buffer)
-  //  memcpy(buffer + *offset, m_f2102->data, sizeof(f2102_t));
+  if (buffer)
+    memcpy(buffer + *offset, m_f2102->data, sizeof(f2102_t));
   *offset += sizeof(f2102_t);
+  */
 }
 
 void f2102_unserialize(void *buffer, unsigned size, unsigned *offset, f8_device_t *device)
 {
+  /*
   f2102_t *m_f2102 = (f2102_t*)device->device;
 
-  //if (buffer)
-  //  memcpy(m_f2102->data, buffer + *offset, sizeof(f2102_t));
+  if (buffer)
+    memcpy(m_f2102->data, buffer + *offset, sizeof(f2102_t));
   *offset += sizeof(f2102_t);
+  */
 }
 
 #endif

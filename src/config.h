@@ -30,7 +30,7 @@
    Enable the debugger.
 */
 #ifndef PF_DEBUGGER
-#define PF_DEBUGGER TRUE
+#define PF_DEBUGGER FALSE
 #endif
 
 /**
