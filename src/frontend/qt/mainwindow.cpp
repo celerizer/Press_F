@@ -161,8 +161,6 @@ void MainWindow::onFrame()
   /* Emulation loop */
   pressf_run(&g_ChannelF);
 
-  font_load(&g_ChannelF, FONT_CUTE);
-
   /* Video */
   m_Framebuffer->update();
 
