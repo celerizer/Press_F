@@ -1,7 +1,7 @@
 LIBRETRO_COMM_DIR = $(CORE_DIR)/frontend/libretro/libretro-common
 
-INCFLAGS := -I$(CORE_DIR) \
-   -I$(CORE_DIR)/hw
+INCFLAGS := \
+   -I$(CORE_DIR)
 
 INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include \
    -I$(LIBRETRO_COMM_DIR)/include/compat \
@@ -16,12 +16,23 @@ INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
 endif
 
 SOURCES_C := \
+   $(CORE_DIR)/debug.c \
    $(CORE_DIR)/emu.c \
-   $(CORE_DIR)/file.c \
    $(CORE_DIR)/font.c \
    $(CORE_DIR)/hle.c \
+   $(CORE_DIR)/hw/2102.c \
+   $(CORE_DIR)/hw/3850.c \
+   $(CORE_DIR)/hw/3851.c \
+   $(CORE_DIR)/hw/beeper.c \
+   $(CORE_DIR)/hw/fairbug_parallel.c \
+   $(CORE_DIR)/hw/hand_controller.c \
+   $(CORE_DIR)/hw/selector_control.c \
+   $(CORE_DIR)/hw/system.c \
+   $(CORE_DIR)/hw/vram.c \
    $(CORE_DIR)/input.c \
+   $(CORE_DIR)/romc.c \
    $(CORE_DIR)/screen.c \
+   $(CORE_DIR)/software.c \
    $(CORE_DIR)/sound.c \
    $(CORE_DIR)/wave.c \
    $(CORE_DIR)/frontend/libretro/libretro.c

@@ -107,11 +107,11 @@ typedef struct f8_device_t
   Device-specific behavior
 */
   void *device;
-  void (*init)       (void *device);
-  void (*free)       (void *device);
-  void (*reset)      (void *device);
-  void (*serialize)  (void *device);
-  void (*unserialize)(void *device);
+  void (*init)       (struct f8_device_t *device);
+  void (*free)       (struct f8_device_t *device);
+  void (*reset)      (struct f8_device_t *device);
+  void (*serialize)  (struct f8_device_t *device);
+  void (*unserialize)(struct f8_device_t *device);
 } f8_device_t;
 
 #define F8D_OP_IN(a) void a(f8_device_t *device, f8_byte *io_data)

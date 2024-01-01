@@ -1,7 +1,6 @@
 #ifndef PRESS_F_VRAM_H
 #define PRESS_F_VRAM_H
 
-#include "../types.h"
 #include "f8_device.h"
 
 /* 2 bits * 128 width * 64 height */

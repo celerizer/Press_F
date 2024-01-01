@@ -1441,7 +1441,6 @@ void pressf_reset(f8_system_t *system)
 {
   if (system)
   {
-    PC0 = 0;
-    PC1 = 0;
+    romc08(system);
   }
 }

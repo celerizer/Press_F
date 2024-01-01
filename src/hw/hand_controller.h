@@ -1,7 +1,6 @@
 #ifndef PRESS_F_HAND_CONTROLLER_H
 #define PRESS_F_HAND_CONTROLLER_H
 
-#include "../types.h"
 #include "f8_device.h"
 
 typedef struct hand_controller_t

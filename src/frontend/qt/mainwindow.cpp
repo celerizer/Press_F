@@ -4,6 +4,7 @@
 extern "C"
 {
   #include "../../emu.h"
+  #include "../../font.h"
   #include "../../input.h"
   #include "../../sound.h"
   #include "../../hw/system.h"
@@ -52,6 +53,26 @@ MainWindow::MainWindow()
   connect(ActEjectCart, SIGNAL(triggered()), this, SLOT(onEjectCart()));
   ButFile->addAction(ActEjectCart);
 
+  QToolButton *ButOne = new QToolButton(this);
+  ButOne->setText("1 / TIME");
+  connect(ButOne, SIGNAL(clicked()), this, SLOT(onButton1()));
+  m_Toolbar->addWidget(ButOne);
+
+  QToolButton *ButTwo = new QToolButton(this);
+  ButTwo->setText("2 / MODE");
+  connect(ButTwo, SIGNAL(clicked()), this, SLOT(onButton2()));
+  m_Toolbar->addWidget(ButTwo);
+
+  QToolButton *ButThree = new QToolButton(this);
+  ButThree->setText("3 / HOLD");
+  connect(ButThree, SIGNAL(clicked()), this, SLOT(onButton3()));
+  m_Toolbar->addWidget(ButThree);
+
+  QToolButton *ButFour = new QToolButton(this);
+  ButFour->setText("4 / START");
+  connect(ButFour, SIGNAL(clicked()), this, SLOT(onButton4()));
+  m_Toolbar->addWidget(ButFour);
+
   /* Setup window properties */
   setWindowTitle("Press F");
   setWindowIcon(QIcon(":/icons/logo"));
@@ -96,25 +117,6 @@ MainWindow::MainWindow()
   memcpy(g_ChannelF.f8devices[1].data, reinterpret_cast<const u8*>(bios_a_data.data()), 1024);
   memcpy(g_ChannelF.f8devices[2].data, reinterpret_cast<const u8*>(bios_b_data.data()), 1024);
 
-  /*
-  FILE *file = fopen("C:/f8/dump-dk.txt", "wb");
-  fprintf(file, "pf_monitor_t mon_steps[] = {");
-  for (int i = 0; i < 10000; i++)
-  {
-    fprintf(file, "{ 0x%04X, 0x%04X, 0x%04X, 0x%04X, 0x%02X, 0x%02X, 0x%02X },\n",
-            g_ChannelF.f8devices[0].pc0,
-            g_ChannelF.f8devices[0].pc1,
-            g_ChannelF.f8devices[0].dc0,
-            g_ChannelF.f8devices[0].dc1,
-            g_ChannelF.main_cpu->accumulator.u,
-            g_ChannelF.main_cpu->status_register,
-            g_ChannelF.main_cpu->isar);
-    pressf_step(&g_ChannelF);
-  }
-  fprintf(file, "};");
-  exit(2);
-  */
-
   /* TODO: Remove */
   RegistersWindow *m_Regs = new RegistersWindow();
   m_Regs->show();
@@ -133,10 +135,10 @@ MainWindow::MainWindow()
 void MainWindow::onFrame()
 {
   /* Input */
-  set_input_button(0, INPUT_TIME,  m_Gamepads[0].buttonL1());
-  set_input_button(0, INPUT_MODE,  m_Gamepads[0].buttonSelect());
-  set_input_button(0, INPUT_HOLD,  m_Gamepads[0].buttonR1());
-  set_input_button(0, INPUT_START, m_Gamepads[0].buttonStart());
+  set_input_button(0, INPUT_TIME, m_Gamepads[0].buttonL1() || wasClicked(0));
+  set_input_button(0, INPUT_MODE, m_Gamepads[0].buttonSelect() || wasClicked(1));
+  set_input_button(0, INPUT_HOLD, m_Gamepads[0].buttonR1() || wasClicked(2));
+  set_input_button(0, INPUT_START, m_Gamepads[0].buttonStart() || wasClicked(3));
 
   set_input_button(4, INPUT_RIGHT,      m_Gamepads[0].buttonRight());
   set_input_button(4, INPUT_LEFT,       m_Gamepads[0].buttonLeft());
@@ -158,6 +160,8 @@ void MainWindow::onFrame()
 
   /* Emulation loop */
   pressf_run(&g_ChannelF);
+
+  font_load(&g_ChannelF, FONT_CUTE);
 
   /* Video */
   m_Framebuffer->update();
@@ -190,11 +194,8 @@ bool MainWindow::loadCartridge(QString Filename)
     return false;
   else
   {
-    pressf_reset(&g_ChannelF);
-    /*
-    Rom.read(reinterpret_cast<char*>(&g_ChannelF.rom[ROM_CARTRIDGE]),
-             ROM_CART_SIZE);
-    */
+    Rom.read(reinterpret_cast<char*>(g_ChannelF.f8devices[8].data), 0x400);
+    Rom.read(reinterpret_cast<char*>(g_ChannelF.f8devices[9].data), 0x400);
 
     /*
       Update the window title to something friendly looking, ie:
@@ -203,8 +204,29 @@ bool MainWindow::loadCartridge(QString Filename)
     setWindowTitle(tr("Press F - ") +
                    Filename.split('/').last().split('(').first());
 
+    pressf_reset(&g_ChannelF);
     return true;
   }
+}
+
+void MainWindow::onButton1()
+{
+  m_ClickedButtons[0] = true;
+}
+
+void MainWindow::onButton2()
+{
+  m_ClickedButtons[1] = true;
+}
+
+void MainWindow::onButton3()
+{
+  m_ClickedButtons[2] = true;
+}
+
+void MainWindow::onButton4()
+{
+  m_ClickedButtons[3] = true;
 }
 
 void MainWindow::onLoadCart()
@@ -212,6 +234,19 @@ void MainWindow::onLoadCart()
   loadCartridge(QFileDialog::getOpenFileName(this,
     tr("Load Cartridge"), "./games", tr("Channel F ROM Files (*.bin *.chf)")));
 }
+
+bool MainWindow::wasClicked(unsigned index)
+{
+  if (index > sizeof(m_ClickedButtons))
+    return false;
+  else
+  {
+    bool val = m_ClickedButtons[index];
+    m_ClickedButtons[index] = false;
+
+    return val;
+  }
+};
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {

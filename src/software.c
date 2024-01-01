@@ -2,6 +2,7 @@
 #include "hw/selector_control.h"
 #include "hw/2102.h"
 #include "hw/vram.h"
+#include "hw/beeper.h"
 
 #include "software.h"
 
@@ -47,7 +48,7 @@ const system_preset_t pf_systems[] =
       { F8_DEVICE_MK4027, 3, 0, 0, NULL, mk4027_write },
       { F8_DEVICE_MK4027, 3, 1, 0, NULL, NULL },
       { F8_DEVICE_MK4027, 3, 4, 0, NULL, NULL },
-      { F8_DEVICE_MK4027, 3, 5, 0, NULL, NULL },
+      /* { F8_DEVICE_MK4027, 3, 5, 0, NULL, NULL }, */
 
       /* Selector Control buttons (5 buttons on the game console) */
       { F8_DEVICE_SELECTOR_CONTROL, 4, 0, 0, selector_control_input, NULL },
@@ -57,6 +58,13 @@ const system_preset_t pf_systems[] =
 
       /* Right Hand-Controller */
       { F8_DEVICE_HAND_CONTROLLER, 6, 1, 0, hand_controller_input, NULL },
+
+      /* Beeper */
+      { F8_DEVICE_BEEPER, 7, 5, 0, NULL, beeper_out },
+
+      /* Cartridge ROM */
+      { F8_DEVICE_3851, 8, 0, 0x800, NULL, NULL },
+      { F8_DEVICE_3851, 9, 0, 0xC00, NULL, NULL },
 
       { F8_DEVICE_INVALID, 0, 0, 0, NULL, NULL }
     }

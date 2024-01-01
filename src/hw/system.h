@@ -29,10 +29,12 @@ typedef struct io_t
 
 typedef struct f8_system_t
 {
+#if !PF_ROMC
   u16 dc0;
   u16 dc1;
   u16 pc0;
   u16 pc1;
+#endif
 
   f8_byte dbus;
 

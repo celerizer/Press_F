@@ -7,6 +7,7 @@
 #include "2102.h"
 #include "vram.h"
 #include "3851.h"
+#include "beeper.h"
 
 f3850_t* f8_main_cpu(f8_system_t *system)
 {
@@ -39,6 +40,9 @@ u8 f8_device_init(f8_device_t *device, const f8_device_id_t type)
     case F8_DEVICE_HAND_CONTROLLER:
       device->init = hand_controller_init;
       break;
+    case F8_DEVICE_BEEPER:
+      device->init = beeper_init;
+      break;
     default:
       return FALSE;
     }
@@ -53,8 +57,6 @@ u8 f8_device_init(f8_device_t *device, const f8_device_id_t type)
 u8 f8_system_init(f8_system_t *system, const system_preset_t *preset)
 {
   unsigned i, j;
-
-  memset(system, 0, sizeof(system));
 
   /* Every F8 system has a central 3850 CPU */
   f8_device_init(&system->f8devices[0], F8_DEVICE_3850);
@@ -113,7 +115,7 @@ unsigned f8_read(f8_system_t *system, void *dest, unsigned address,
   {
     f8_device_t *device = &system->f8devices[i];
 
-    if (device->length && address >= device->start)
+    if (device->length && address >= device->start && address <= device->end)
     {
       memcpy(dest, &device->data[address - device->start], size);
       return size;
@@ -135,7 +137,7 @@ unsigned f8_write(f8_system_t *system, unsigned address, const void *src,
   {
     f8_device_t *device = &system->f8devices[i];
 
-    if (address >= device->start)
+    if (device->length && address >= device->start && address <= device->end)
     {
       memcpy(&device->data[address - device->start], src, size);
       return TRUE;

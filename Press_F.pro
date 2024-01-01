@@ -30,6 +30,7 @@ SOURCES += \
     src/hw/2102.c \
     src/hw/3850.c \
     src/hw/3851.c \
+    src/hw/beeper.c \
     src/hw/fairbug_parallel.c \
     src/hw/hand_controller.c \
     src/hw/selector_control.c \
@@ -56,6 +57,7 @@ HEADERS += \
     src/hw/2102.h \
     src/hw/3850.h \
     src/hw/3851.h \
+    src/hw/beeper.h \
     src/hw/f8_device.h \
     src/hw/fairbug_parallel.h \
     src/hw/hand_controller.h \
@@ -70,8 +72,6 @@ HEADERS += \
     src/sound.h \
     src/types.h \
     src/wave.h
-
-FORMS +=
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
