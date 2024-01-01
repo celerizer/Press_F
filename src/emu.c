@@ -100,12 +100,13 @@ void add(f8_system_t *system, f8_byte *dest, unsigned src)
 void add_bcd(f8_system_t *system, f8_byte *augend, unsigned addend)
 {
   unsigned tmp = augend->u + addend;
-  int c, ic;
+  int c = 0;
+  int ic = 0;
 
   if (((augend->u + addend) & 0xff0) > 0xf0)
-                  c = 1;
-          if ((augend->u & 0x0f) + (addend & 0x0f) > 0x0F)
-                  ic = 1;
+    c = 1;
+  if ((augend->u & 0x0f) + (addend & 0x0f) > 0x0F)
+    ic = 1;
 
   add(system, augend, addend);
 
