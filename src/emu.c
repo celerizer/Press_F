@@ -112,39 +112,13 @@ void add_bcd(f8_system_t *system, f8_byte *augend, unsigned addend)
 
   if (!c && !ic)
     tmp = ((tmp + 0xa0) & 0xf0) + ((tmp + 0x0a) & 0x0f);
-  else if (!c && c)
+  else if (!c && ic)
     tmp = ((tmp + 0xa0) & 0xf0) + (tmp & 0x0f);
-  else if (c && !c)
+  else if (c && !ic)
     tmp = (tmp & 0xf0) + ((tmp + 0x0a) & 0x0f);
 
   augend->u = tmp;
 }
-
-/*
-void add_bcd(f8_system_t *system, byte *augend, int addend)
-{
-   u8 tmp = (augend->u + addend;
-
-   u8 c = 0; // high order carry
-   u8 ic = 0; // low order carry
-
-   if (((*augend + addend) & 0xff0) > 0xf0)
-      c = 1;
-   if ((*augend & 0x0f) + (addend & 0x0f) > 0x0F)
-      ic = 1;
-
-   add(system, augend, addend);
-
-   if (c == 0 && ic == 0)
-      tmp = ((tmp + 0xa0) & 0xf0) + ((tmp + 0x0a) & 0x0f);
-   if (c == 0 && ic == 1)
-      tmp = ((tmp + 0xa0) & 0xf0) + (tmp & 0x0f);
-   if (c == 1 && ic == 0)
-      tmp = (tmp & 0xf0) + ((tmp + 0x0a) & 0x0f);
-
-   *augend = tmp;
-}
-*/
 
 /**
  * Gets a pointer to the byte the ISAR (Indirect Scratchpad Address Register)

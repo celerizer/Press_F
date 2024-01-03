@@ -27,6 +27,7 @@ static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
+static struct retro_led_interface led_cb = { NULL };
 static retro_log_printf_t log_cb;
 
 static struct retro_microphone *mic = NULL;
@@ -196,6 +197,14 @@ void set_variables(void)
       mic_enabled = false;
     }
   }
+
+  var.key = "press_f_schach_led";
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (string_is_equal(var.value, "enabled"))
+      environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_cb);
+  }
 }
 
 /* libretro API */
@@ -270,11 +279,22 @@ void retro_run(void)
   handle_input();
   pressf_run(&retro_channelf);
 
+  /* Update audio */
   sound_write();
   audio_batch_cb(samples, PF_SAMPLES);
 
+  /* Update video */
   lr_video_draw(((vram_t*)retro_channelf.f8devices[3].device)->data, screen_buffer);
   video_cb(screen_buffer, lr_video_width, lr_video_height, lr_video_width * 2);
+
+  /* Update miscellaneous hardware */
+  if (led_cb.set_led_state)
+  {
+    f8_byte led_state;
+
+    if (f8_read(&retro_channelf, &led_state, 0x3800, sizeof(led_state)))
+      led_cb.set_led_state(0, led_state.s);
+  }
 }
 
 void retro_get_system_info(struct retro_system_info *info)

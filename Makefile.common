@@ -24,8 +24,10 @@ SOURCES_C := \
    $(CORE_DIR)/hw/3850.c \
    $(CORE_DIR)/hw/3851.c \
    $(CORE_DIR)/hw/beeper.c \
+   $(CORE_DIR)/hw/f8_device.c \
    $(CORE_DIR)/hw/fairbug_parallel.c \
    $(CORE_DIR)/hw/hand_controller.c \
+   $(CORE_DIR)/hw/schach_led.c \
    $(CORE_DIR)/hw/selector_control.c \
    $(CORE_DIR)/hw/system.c \
    $(CORE_DIR)/hw/vram.c \

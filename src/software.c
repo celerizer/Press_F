@@ -31,6 +31,20 @@ const software_t pf_software[] =
       { F8_DEVICE_2102, 0, 20, 0, NULL, NULL },
     }
   },
+  {
+    "SABA Videoplay 20 (Schach)",
+    F8_SYSTEM_CHANNEL_F,
+    {
+      0x04fb6dce
+    },
+    {
+      { F8_DEVICE_3851, 0, 0, 0x1000, NULL, NULL },
+      { F8_DEVICE_3851, 1, 0, 0x1400, NULL, NULL },
+      { F8_DEVICE_3851, 2, 0, 0x1800, NULL, NULL },
+      { F8_DEVICE_3851, 3, 0, 0x1C00, NULL, NULL },
+      { F8_DEVICE_SCHACH_LED, 4, 0, 0x3800, NULL, NULL }
+    }
+  },
   { NULL, 0, { 0 }, { { F8_DEVICE_INVALID, 0, 0, 0, NULL, NULL } } }
 };
 

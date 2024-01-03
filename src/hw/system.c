@@ -8,6 +8,7 @@
 #include "vram.h"
 #include "3851.h"
 #include "beeper.h"
+#include "schach_led.h"
 
 f3850_t* f8_main_cpu(f8_system_t *system)
 {
@@ -42,6 +43,9 @@ u8 f8_device_init(f8_device_t *device, const f8_device_id_t type)
       break;
     case F8_DEVICE_BEEPER:
       device->init = beeper_init;
+      break;
+    case F8_DEVICE_SCHACH_LED:
+      device->init = schach_led_init;
       break;
     default:
       return FALSE;

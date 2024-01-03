@@ -31,8 +31,10 @@ SOURCES += \
     src/hw/3850.c \
     src/hw/3851.c \
     src/hw/beeper.c \
+    src/hw/f8_device.c \
     src/hw/fairbug_parallel.c \
     src/hw/hand_controller.c \
+    src/hw/schach_led.c \
     src/hw/selector_control.c \
     src/hw/system.c \
     src/hw/vram.c \
@@ -62,6 +64,7 @@ HEADERS += \
     src/hw/fairbug_parallel.h \
     src/hw/hand_controller.h \
     src/hw/kdbug.h \
+    src/hw/schach_led.h \
     src/hw/selector_control.h \
     src/hw/system.h \
     src/hw/vram.h \

@@ -24,14 +24,20 @@ typedef enum
   f8_DEVICE_FAIRBUG_SERIAL,
   F8_DEVICE_FAIRBUG_PARALLEL,
 
-  /**
-   * VRAM device used in the Channel F.
-   **/
+  /* VRAM device used in the Channel F */
   F8_DEVICE_MK4027,
+
+  /* 4-tone beeper for audio in the Channel F */
   F8_DEVICE_BEEPER,
 
+  /* 4-button control on the console for the Channel F */
   F8_DEVICE_SELECTOR_CONTROL,
+
+  /* A controller for the Channel F */
   F8_DEVICE_HAND_CONTROLLER,
+
+  /* An LED used in Schach to indicate when the computer is thinking */
+  F8_DEVICE_SCHACH_LED,
 
   F8_DEVICE_SIZE
 } f8_device_id_t;
@@ -118,5 +124,9 @@ typedef struct f8_device_t
 #define F8D_OP_OUT(a) void a(f8_device_t *device, f8_byte *io_data, f8_byte value)
 typedef void F8D_OP_IN_T(f8_device_t*, f8_byte*);
 typedef void F8D_OP_OUT_T(f8_device_t*, f8_byte*, f8_byte);
+
+void f8_generic_init(f8_device_t *device, unsigned size);
+void f8_generic_serialize(const f8_device_t *device, void *buffer, unsigned *size);
+void f8_generic_unserialize(f8_device_t *device, const void *buffer, unsigned *size);
 
 #endif
