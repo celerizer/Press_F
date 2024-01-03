@@ -33,11 +33,14 @@ static retro_log_printf_t log_cb;
 static struct retro_microphone *mic = NULL;
 static struct retro_microphone_interface mic_cb;
 static bool mic_enabled = false;
+static unsigned mic_frequency = PF_FREQUENCY;
 static int16_t mic_samples[PF_FREQUENCY / 60];
 
 static struct retro_rumble_interface rumble;
 static retro_video_refresh_t video_cb;
 
+/* Initialize the microphone, read in the input rate, if initialization
+ * succeeds and rate is valid, return true. */
 bool init_mic(void)
 {
   retro_microphone_params_t params = { PF_FREQUENCY };
@@ -48,8 +51,13 @@ bool init_mic(void)
     retro_microphone_t *new_mic = NULL;
 
     mic = mic_cb.open_mic(&params);
-    if (mic)
-      return mic_cb.set_mic_state(mic, true);
+    if (mic && mic_cb.get_params(mic, &params))
+    {
+      mic_frequency = params.rate;
+      return (mic_frequency > 0 &&
+              mic_frequency <= PF_FREQUENCY &&
+              mic_cb.set_mic_state(mic, true));
+    }
   }
 
   return false;
@@ -97,9 +105,10 @@ void handle_input(void)
   set_input_button(1, INPUT_PULL, input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
   set_input_button(1, INPUT_PUSH, input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
 
+  /* Read microphone data for the TV Powww option */
   if (mic && mic_cb.get_mic_state(mic))
   {
-    unsigned read = mic_cb.read_mic(mic, mic_samples, PF_FREQUENCY / 60);
+    unsigned read = mic_cb.read_mic(mic, mic_samples, mic_frequency / 60);
     unsigned entropy = 0;
     int i;
 
@@ -316,7 +325,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
   info->geometry.max_height = lr_video_height;
   info->geometry.aspect_ratio = lr_video_aspect;
   info->timing.fps = 60;
-  info->timing.sample_rate = 44100;
+  info->timing.sample_rate = PF_FREQUENCY;
 }
 
 void retro_deinit(void)
