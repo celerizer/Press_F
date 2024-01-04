@@ -53,10 +53,16 @@ bool init_mic(void)
     mic = mic_cb.open_mic(&params);
     if (mic && mic_cb.get_params(mic, &params))
     {
+      /* Forces the BIOS routine for setting up game timers to always
+       * produce one of 15 seconds */
+      const uint8_t hack[12] = { 0x67, 0x69, 0x70, 0x5D, 0x20, 0x15,
+                                 0x5C, 0x2B, 0x2B, 0x2B, 0x2B, 0x2B };
+
       mic_frequency = params.rate;
       return (mic_frequency > 0 &&
               mic_frequency <= PF_FREQUENCY &&
-              mic_cb.set_mic_state(mic, true));
+              mic_cb.set_mic_state(mic, true) &&
+              f8_write(&retro_channelf, 0x0251, hack, sizeof(hack)));
     }
   }
 
