@@ -89,10 +89,10 @@ void RegisterLineEdit::onRefresh16Bit()
 
 RegistersWindow::RegistersWindow()
 {
-    /*
   char temp_string[256];
   u32 i, j;
 
+  /*
   m_CommandsList = new QTableWidget();
   m_CommandsList->horizontalHeader()->setVisible(false);
   m_CommandsList->horizontalHeader()->setStretchLastSection(true);
@@ -132,6 +132,7 @@ RegistersWindow::RegistersWindow()
   RegistersBox->addWidget(m_Dc0, 2, 0);
   RegistersBox->addWidget(m_Dc1, 2, 1);
   RegistersGroupBox->setLayout(RegistersBox);
+  */
 
   QGroupBox *ScratchpadGroupBox = new QGroupBox("Scratchpad RAM");
   QGridLayout* ScratchpadBox = new QGridLayout();
@@ -150,18 +151,16 @@ RegistersWindow::RegistersWindow()
     for (j = 0; j < 8; j++)
       m_ScratchpadTable->setItem(i, j, new QTableWidgetItem());
 
-  /* Finalize window layout
   QGridLayout *layout = new QGridLayout;
-  layout->addWidget(m_CommandsList,       0, 0, 2, 1);
-  layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
+  //layout->addWidget(m_CommandsList,       0, 0, 2, 1);
+  //layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
   layout->addWidget(ScratchpadGroupBox,   1, 1, 1, 1);
-  layout->addWidget(m_CommandDescription, 2, 0, 1, 2);
+  //layout->addWidget(m_CommandDescription, 2, 0, 1, 2);
   setLayout(layout);
 
   m_Timer = new QTimer(this);
   m_Timer->start(10);
   connect(m_Timer, SIGNAL(timeout()), this, SLOT(onRefresh()));
-  */
 }
 
 void RegistersWindow::onClickCommand(int Row, int Column, int PreRow, int PreColumn)
@@ -174,25 +173,26 @@ void RegistersWindow::onClickCommand(int Row, int Column, int PreRow, int PreCol
 
 void RegistersWindow::onRefresh()
 {
-  /*QTableWidgetItem *item;
+  QTableWidgetItem *item;
   u8 i, j;
 
   for (i = 0; i < 8; i++)
   {
     for (j = 0; j < 8; j++)
     {
-      m_ScratchpadTable->item(i, j)->setText(QString::number(g_ChannelF.c3850.scratchpad[i * 8 + j], 16).toUpper());
+      m_ScratchpadTable->item(i, j)->setText(QString::number(
+        g_ChannelF.main_cpu->scratchpad[i * 8 + j].u, 16).toUpper());
       m_ScratchpadTable->item(i, j)->setBackground(Qt::black);
     }
   }
 
-  /* Highlight ISAR pointer in blue
-  i = g_ChannelF.c3850.isar / 8;
-  j = g_ChannelF.c3850.isar - i * 8;
+  /* Highlight ISAR pointer in blue */
+  i = g_ChannelF.main_cpu->isar / 8;
+  j = g_ChannelF.main_cpu->isar - i * 8;
   m_ScratchpadTable->item(i, j)->setBackground(Qt::blue);
 
-  /* Highlight stack usage in pink
-  i = g_ChannelF.c3850.scratchpad[59];
+  /* Highlight stack usage in pink */
+  i = g_ChannelF.main_cpu->scratchpad[59].u;
   while (i > 40)
   {
     item = m_ScratchpadTable->item(i / 8, (i % 8) - 1);
@@ -205,7 +205,6 @@ void RegistersWindow::onRefresh()
     else
       break;
   }
-  */
 }
 
 #endif
