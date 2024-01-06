@@ -99,7 +99,6 @@ MainWindow::MainWindow()
   pressf_init(&g_ChannelF);
   f8_system_init(&g_ChannelF, &pf_systems[0]);
 
-  /* Initialize emulation (TODO) */
   QFile bios_a_file("C:/f8/sl31253.bin");
   QFile bios_b_file("C:/f8/sl31254.bin");
 

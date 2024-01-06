@@ -22,9 +22,11 @@ QPfSettings::QPfSettings(const QString& filename)
   QSettings settings(filename, QSettings::IniFormat);
 
   m_Filename = filename;
+  settings.setValue("bios_path", QDir::currentPath());
   settings.setValue("font", FONT_FAIRCHILD);
   settings.setValue("screen_size", 0);
   settings.setValue("skip_cartridge_verification", true);
+  settings.setValue("tv_powww", false);
   settings.sync();
 }
 

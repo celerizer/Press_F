@@ -90,37 +90,38 @@ void RegisterLineEdit::onRefresh16Bit()
 RegistersWindow::RegistersWindow()
 {
   char temp_string[256];
-  u32 i, j;
+  int i, j;
 
-  /*
   m_CommandsList = new QTableWidget();
   m_CommandsList->horizontalHeader()->setVisible(false);
   m_CommandsList->horizontalHeader()->setStretchLastSection(true);
   m_CommandsList->verticalHeader()->setVisible(false);
   m_CommandsList->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-  m_CommandsList->setRowCount(sizeof(g_ChannelF.rom));
+  m_CommandsList->setRowCount(0x0400);
   m_CommandsList->setColumnCount(2);
-  connect(m_CommandsList, SIGNAL(currentCellChanged(int, int, int, int)), this, SLOT(onClickCommand(int, int, int, int)));
-  for (i = 0; i < sizeof(g_ChannelF.rom); i++)
+  connect(m_CommandsList, SIGNAL(currentCellChanged(int, int, int, int)),
+          this, SLOT(onClickCommand(int, int, int, int)));
+  for (i = 0; i < m_CommandsList->rowCount(); i++)
   {
+    auto rom = g_ChannelF.f8devices[1].data;
     snprintf(temp_string, sizeof(temp_string), "%04X", i);
     m_CommandsList->setItem(i, 0, new QTableWidgetItem(QString(temp_string)));
 
-    if (g_ChannelF.rom[i] < 16)
-      snprintf(temp_string, 256, opcodes[g_ChannelF.rom[i]].format, g_ChannelF.rom[i], g_ChannelF.rom[i + 1], g_ChannelF.rom[i + 2]);
+    if (rom[i].u < 16)
+      snprintf(temp_string, 256, opcodes[rom[i].u].format, rom[i].u, rom[i + 1].u, rom[i + 2].u);
     else
-      snprintf(temp_string, 256, "Command: %02X", g_ChannelF.rom[i]);
+      snprintf(temp_string, 256, "Command: %02X", rom[i]);
     m_CommandsList->setItem(i, 1, new QTableWidgetItem(QString(temp_string)));
   }
 
   m_CommandDescription = new QLabel();
-  m_A    = new RegisterLineEdit("A (Accumulator)",              &g_ChannelF.c3850.accumulator);
-  m_W    = new RegisterLineEdit("W (Status)",                   &g_ChannelF.c3850.status_register);
-  m_Isar = new RegisterLineEdit("ISAR (Indirect RAM pointer)",  &g_ChannelF.c3850.isar);
-  m_Pc0  = new RegisterLineEdit("PC0 (Process counter)",        &g_ChannelF.pc0, 2);
-  m_Pc1  = new RegisterLineEdit("PC1 (Process counter backup)", &g_ChannelF.pc1, 2);
-  m_Dc0  = new RegisterLineEdit("DC0 (Data counter)",           &g_ChannelF.dc0, 2);
-  m_Dc1  = new RegisterLineEdit("DC1 (Data counter backup)",    &g_ChannelF.dc1, 2);
+  m_A = new RegisterLineEdit("A (Accumulator)", &g_ChannelF.main_cpu->accumulator);
+  m_W = new RegisterLineEdit("W (Status)", &g_ChannelF.main_cpu->status_register);
+  m_Isar = new RegisterLineEdit("ISAR (Indirect RAM pointer)", &g_ChannelF.main_cpu->isar);
+  m_Pc0 = new RegisterLineEdit("PC0 (Process counter)", &g_ChannelF.f8devices[0].pc0, 2);
+  m_Pc1 = new RegisterLineEdit("PC1 (Process counter backup)", &g_ChannelF.f8devices[0].pc1, 2);
+  m_Dc0 = new RegisterLineEdit("DC0 (Data counter)", &g_ChannelF.f8devices[0].dc0, 2);
+  m_Dc1 = new RegisterLineEdit("DC1 (Data counter backup)", &g_ChannelF.f8devices[0].dc1, 2);
 
   QGroupBox *RegistersGroupBox = new QGroupBox("Registers");
   QGridLayout* RegistersBox = new QGridLayout();
@@ -132,7 +133,6 @@ RegistersWindow::RegistersWindow()
   RegistersBox->addWidget(m_Dc0, 2, 0);
   RegistersBox->addWidget(m_Dc1, 2, 1);
   RegistersGroupBox->setLayout(RegistersBox);
-  */
 
   QGroupBox *ScratchpadGroupBox = new QGroupBox("Scratchpad RAM");
   QGridLayout* ScratchpadBox = new QGridLayout();
@@ -152,10 +152,10 @@ RegistersWindow::RegistersWindow()
       m_ScratchpadTable->setItem(i, j, new QTableWidgetItem());
 
   QGridLayout *layout = new QGridLayout;
-  //layout->addWidget(m_CommandsList,       0, 0, 2, 1);
-  //layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
+  layout->addWidget(m_CommandsList,       0, 0, 2, 1);
+  layout->addWidget(RegistersGroupBox,    0, 1, 1, 1);
   layout->addWidget(ScratchpadGroupBox,   1, 1, 1, 1);
-  //layout->addWidget(m_CommandDescription, 2, 0, 1, 2);
+  layout->addWidget(m_CommandDescription, 2, 0, 1, 2);
   setLayout(layout);
 
   m_Timer = new QTimer(this);
