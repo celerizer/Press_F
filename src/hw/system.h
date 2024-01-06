@@ -8,12 +8,8 @@
 
 #define F8_MAX_IO_PORTS 128
 
-#define ROM_BIOS_A    0x0000
-#define ROM_BIOS_B    0x0400
-#define ROM_CARTRIDGE 0x0800
-
 /* Arbitrary limit for max number of devices hooked up to a system */
-#define F8_MAX_DEVICES 16
+#define F8_MAX_DEVICES 32
 
 /**
  * A holder that serves as a "connection" between the emulated system and an
@@ -122,9 +118,13 @@ unsigned f8_write(f8_system_t *system, unsigned address, const void *src,
 
 u8 f8_device_add(f8_system_t *system, f8_device_t *device);
 
+u8 f8_device_init(f8_device_t *device, const f8_device_id_t type);
+
 u8 f8_device_remove(f8_system_t *system, f8_device_t *device);
 
 u8 f8_device_remove_index(f8_system_t *system, unsigned index);
+
+u8 f8_device_set_start(f8_device_t *device, unsigned start);
 
 u8 f8_settings_apply(f8_system_t *system, f8_settings_t settings);
 

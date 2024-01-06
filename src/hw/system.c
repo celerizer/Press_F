@@ -5,6 +5,7 @@
 #include "selector_control.h"
 #include "hand_controller.h"
 #include "2102.h"
+#include "2114.h"
 #include "vram.h"
 #include "3851.h"
 #include "beeper.h"
@@ -47,10 +48,26 @@ u8 f8_device_init(f8_device_t *device, const f8_device_id_t type)
     case F8_DEVICE_SCHACH_LED:
       device->init = schach_led_init;
       break;
+    case F8_DEVICE_2114:
+      device->init = f2114_init;
+      break;
     default:
       return FALSE;
     }
     device->init(device);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+u8 f8_device_set_start(f8_device_t *device, unsigned start)
+{
+  if (start + device->length < 0x10000)
+  {
+    device->start = start;
+    device->end = start + device->length - 1;
 
     return TRUE;
   }
@@ -175,9 +192,9 @@ u8 f8_settings_apply(struct f8_system_t *system, f8_settings_t settings)
 
   system->settings = settings;
   if (system->settings.cf_skip_cartridge_verification)
-    success |= f8_hack_skip_verification(system);
+    success &= f8_hack_skip_verification(system);
   if (system->settings.cf_tv_powww)
-    success |= f8_hack_tv_powww(system);
+    success &= f8_hack_tv_powww(system);
 
   return success;
 }

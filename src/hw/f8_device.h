@@ -39,6 +39,9 @@ typedef enum
   /* An LED used in Schach to indicate when the computer is thinking */
   F8_DEVICE_SCHACH_LED,
 
+  /* Extra RAM chip used in the Schach videocart */
+  F8_DEVICE_2114,
+
   F8_DEVICE_SIZE
 } f8_device_id_t;
 

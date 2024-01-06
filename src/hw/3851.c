@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include "3851.h"
 
 static const char *name = "Fairchild 3851 (Program Storage Unit)";

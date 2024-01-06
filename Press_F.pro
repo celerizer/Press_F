@@ -28,6 +28,7 @@ SOURCES += \
     src/frontend/qt/settings.cpp \
     src/hle.c \
     src/hw/2102.c \
+    src/hw/2114.c \
     src/hw/3850.c \
     src/hw/3851.c \
     src/hw/beeper.c \
@@ -57,6 +58,7 @@ HEADERS += \
     src/frontend/qt/settings.h \
     src/hle.h \
     src/hw/2102.h \
+    src/hw/2114.h \
     src/hw/3850.h \
     src/hw/3851.h \
     src/hw/beeper.h \

@@ -38,10 +38,10 @@ const software_t pf_software[] =
       0x04fb6dce
     },
     {
-      { F8_DEVICE_3851, 0, 0, 0x1000, NULL, NULL },
-      { F8_DEVICE_3851, 1, 0, 0x1400, NULL, NULL },
-      { F8_DEVICE_3851, 2, 0, 0x1800, NULL, NULL },
-      { F8_DEVICE_3851, 3, 0, 0x1C00, NULL, NULL },
+      { F8_DEVICE_2114, 0, 0, 0x2800, NULL, NULL },
+      { F8_DEVICE_2114, 1, 0, 0x2A00, NULL, NULL },
+      { F8_DEVICE_2114, 2, 0, 0x2C00, NULL, NULL },
+      { F8_DEVICE_2114, 3, 0, 0x2E00, NULL, NULL },
       { F8_DEVICE_SCHACH_LED, 4, 0, 0x3800, NULL, NULL }
     }
   },
@@ -79,6 +79,12 @@ const system_preset_t pf_systems[] =
       /* Cartridge ROM */
       { F8_DEVICE_3851, 8, 0, 0x800, NULL, NULL },
       { F8_DEVICE_3851, 9, 0, 0xC00, NULL, NULL },
+      { F8_DEVICE_3851, 10, 0, 0x1000, NULL, NULL },
+      { F8_DEVICE_3851, 11, 0, 0x1400, NULL, NULL },
+      { F8_DEVICE_3851, 12, 0, 0x1800, NULL, NULL },
+      { F8_DEVICE_3851, 13, 0, 0x1C00, NULL, NULL },
+      { F8_DEVICE_3851, 14, 0, 0x2000, NULL, NULL },
+      { F8_DEVICE_3851, 15, 0, 0x2400, NULL, NULL },
 
       { F8_DEVICE_INVALID, 0, 0, 0, NULL, NULL }
     }
@@ -104,7 +110,7 @@ void crc32(const void *data, u32 n_bytes, u32* crc)
     for (i = 0; i < 0x100; ++i)
       table[i] = crc32_for_byte(i);
   for (i = 0; i < n_bytes; ++i)
-    *crc = table[(u8)*crc ^ ((u8*)data)[i]] ^ *crc >> 8;
+    *crc = table[(u8)*crc ^ ((const u8*)data)[i]] ^ *crc >> 8;
 }
 
 const software_t* software_identify(const void *data, u32 size)
