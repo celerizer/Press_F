@@ -53,16 +53,10 @@ bool init_mic(void)
     mic = mic_cb.open_mic(&params);
     if (mic && mic_cb.get_params(mic, &params))
     {
-      /* Forces the BIOS routine for setting up game timers to always
-       * produce one of 15 seconds */
-      const uint8_t hack[12] = { 0x67, 0x69, 0x70, 0x5D, 0x20, 0x15,
-                                 0x5C, 0x2B, 0x2B, 0x2B, 0x2B, 0x2B };
-
       mic_frequency = params.rate;
       return (mic_frequency > 0 &&
               mic_frequency <= PF_FREQUENCY &&
-              mic_cb.set_mic_state(mic, true) &&
-              f8_write(&retro_channelf, 0x0251, hack, sizeof(hack)));
+              mic_cb.set_mic_state(mic, true));
     }
   }
 
@@ -158,6 +152,7 @@ bool load_system_file(char *filename, void *rom_data, u16 rom_size)
 void set_variables(void)
 {
   struct retro_variable var = { 0 };
+  f8_settings_t settings = { 0, 0, 0, 0, 0 };
 
   var.key = "press_f_screen_size";
 
@@ -177,19 +172,16 @@ void set_variables(void)
   }
 
   var.key = "press_f_skip_verification";
-
   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !strcmp(var.value, "enabled"))
-  {
-    // todo
-  }
+    settings.cf_skip_cartridge_verification = true;
+  else
+    settings.cf_skip_cartridge_verification = false;
 
   var.key = "press_f_cpu_clock";
-
   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     retro_channelf.total_cycles = atoi(var.value);
 
   var.key = "press_f_font";
-
   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
   {
     if (string_is_equal(var.value, "cute"))
@@ -201,25 +193,29 @@ void set_variables(void)
   }
 
   var.key = "press_f_tv_powww";
-
   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
   {
     if (string_is_equal(var.value, "enabled"))
+    {
+      settings.cf_tv_powww = true;
       mic_enabled = init_mic();
+    }
     else
     {
+      settings.cf_tv_powww = false;
       stop_mic();
       mic_enabled = false;
     }
   }
 
   var.key = "press_f_schach_led";
-
   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
   {
     if (string_is_equal(var.value, "enabled"))
       environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_cb);
   }
+
+  f8_settings_apply(&retro_channelf, settings);
 }
 
 /* libretro API */
