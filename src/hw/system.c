@@ -150,3 +150,48 @@ unsigned f8_write(f8_system_t *system, unsigned address, const void *src,
 
   return FALSE;
 }
+
+u8 f8_hack_skip_verification(f8_system_t *system)
+{
+  /* Apply NOPs to the instructions for comparing ROM data to $55, so
+   * verification always returns true */
+  const u8 hack[] = { 0x2B, 0x2B };
+
+  return f8_write(system, 0x0015, hack, sizeof(hack)) == sizeof(hack);
+}
+
+u8 f8_hack_tv_powww(struct f8_system_t *system)
+{
+  /* Overwrite code for loading timer minutes so timer always sets to 00:15 */
+  const u8 hack[] = { 0x67, 0x69, 0x70, 0x5D, 0x20, 0x15,
+                      0x5C, 0x2B, 0x2B, 0x2B, 0x2B, 0x2B };
+
+  return f8_write(system, 0x0251, hack, sizeof(hack)) == sizeof(hack);
+}
+
+u8 f8_settings_apply(struct f8_system_t *system, f8_settings_t settings)
+{
+  u8 success = TRUE;
+
+  system->settings = settings;
+  if (system->settings.cf_skip_cartridge_verification)
+    success |= f8_hack_skip_verification(system);
+  if (system->settings.cf_tv_powww)
+    success |= f8_hack_tv_powww(system);
+
+  return success;
+}
+
+u8 f8_settings_apply_default(struct f8_system_t *system)
+{
+  const f8_settings_t f8_settings_default =
+  {
+    F8_SYSTEM_CHANNEL_F,
+    FALSE,
+    FALSE,
+    FALSE,
+    FALSE
+  };
+
+  return f8_settings_apply(system, f8_settings_default);
+}

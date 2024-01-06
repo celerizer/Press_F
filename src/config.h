@@ -1,34 +1,27 @@
 #ifndef PRESS_F_CONFIG_H
 #define PRESS_F_CONFIG_H
 
-#include "software.h"
 #include "types.h"
-
-/*
-================================================================================
-   Compile-time options
-================================================================================
-*/
 
 /**
  * Constantly checks the validity of pointers in main emulation loop.
  * Could be a performance hit and the program should be stable to the point
  * where this isn't needed.
- **/
+ */
 #ifndef PRESS_F_SAFETY
 #define PRESS_F_SAFETY FALSE
 #endif
 
-/*
-   Enable audio processing.
-*/
+/**
+ * Enable audio processing.
+ */
 #ifndef PF_AUDIO_ENABLE
 #define PF_AUDIO_ENABLE TRUE
 #endif
 
-/*
-   Enable the debugger.
-*/
+/**
+ * Enable the debugger.
+ */
 #ifndef PF_DEBUGGER
 #define PF_DEBUGGER FALSE
 #endif
@@ -36,7 +29,7 @@
 /**
  * Defines whether or not to use static asserts at compile time.
  * Only necessary for developers.
- **/
+ */
 #ifndef PF_STATIC_ASSERTS
 #define PF_STATIC_ASSERTS FALSE
 #endif
@@ -49,7 +42,7 @@
 /**
  * Sampling frequency for sound.
  * Turn this down if audio causes slowdowns.
- **/
+ */
 #ifndef PF_FREQUENCY
 #define PF_FREQUENCY 44100
 #endif
@@ -59,14 +52,14 @@ PF_STATIC_ASSERT(!(PF_FREQUENCY % 60),
 /**
  * Determine whether HLE BIOS implementations should be used.
  * @todo This should be a runtime option as well.
- **/
+ */
 #ifndef PF_HAVE_HLE_BIOS
 #define PF_HAVE_HLE_BIOS TRUE
 #endif
 
-/*
-   Minimum / maximum sound volume. Needs to be a signed short.
-*/
+/**
+ * Minimum / maximum sound volume. Needs to be a signed short.
+ */
 #ifndef PF_MIN_AMPLITUDE
 #define PF_MIN_AMPLITUDE 0x0000
 #endif
@@ -99,40 +92,5 @@ PF_STATIC_ASSERT(!(PF_FREQUENCY % 60),
 #ifndef PF_SERIALIZE_COPYRIGHTED_CONTENT
 #define PF_SERIALIZE_COPYRIGHTED_CONTENT FALSE
 #endif
-
-/* Runtime options */
-typedef struct pf_settings_t
-{
-  /**
-   * Determines which system preset to load if software identification fails.
-   * See "software.h"
-   */
-  u8 default_system;
-
-  /**
-   * Bool: Always hookup a 2114 chip at $2800 under Channel F series presets.
-   * This is very common for Channel F homebrew.
-   */
-  u8 cf_always_scach;
-
-  /**
-   * Bool: Rasterizes extra VRAM data to the framebuffer.
-   */
-  u8 cf_full_vram;
-
-  /**
-   * Bool: Allows any software to be played under Channel F series presets.
-   * Done by NOPing $0015 and $0016 in the 3851 BIOS.
-   */
-  u8 cf_skip_cartridge_verification;
-} pf_settings_t;
-
-/*const pf_settings_t settings_default =
-{
-  F8_SYSTEM_CHANNEL_F,
-  FALSE,
-  FALSE,
-  FALSE
-};*/
 
 #endif

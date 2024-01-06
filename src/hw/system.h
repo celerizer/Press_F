@@ -4,6 +4,7 @@
 #include "3850.h"
 #include "f8_device.h"
 #include "../config.h"
+#include "../software.h"
 
 #define F8_MAX_IO_PORTS 128
 
@@ -27,6 +28,41 @@ typedef struct io_t
   f8_byte data;
 } io_t;
 
+/* Runtime options */
+typedef struct f8_settings_t
+{
+  /**
+   * Determines which system preset to load if software identification fails.
+   * See "software.h"
+   */
+  u8 default_system;
+
+  /**
+   * Bool: Always hookup a 2114 chip at $2800 under Channel F series presets.
+   * This is very common for Channel F homebrew.
+   */
+  u8 cf_always_scach;
+
+  /**
+   * Bool: Rasterizes extra VRAM data to the framebuffer.
+   */
+  u8 cf_full_vram;
+
+  /**
+   * Bool: Allows any software to be played under Channel F series presets.
+   * Done by NOPing $0015 and $0016 in the 3851 BIOS.
+   */
+  u8 cf_skip_cartridge_verification;
+
+  /**
+   * Bool: Enables "TV Powww!" mode, which applies a hack to the BIOS to force
+   * a 15-second timer to any games that support it.
+   * This flag also acts as a hint to the frontend to use microphone data to
+   * control the game by inputting INPUT_PUSH.
+   */
+  u8 cf_tv_powww;
+} f8_settings_t;
+
 typedef struct f8_system_t
 {
 #if !PF_ROMC
@@ -47,7 +83,7 @@ typedef struct f8_system_t
 
   io_t io_ports[F8_MAX_IO_PORTS];
 
-  pf_settings_t settings;
+  f8_settings_t settings;
 } f8_system_t;
 
 /**
@@ -89,6 +125,10 @@ u8 f8_device_add(f8_system_t *system, f8_device_t *device);
 u8 f8_device_remove(f8_system_t *system, f8_device_t *device);
 
 u8 f8_device_remove_index(f8_system_t *system, unsigned index);
+
+u8 f8_settings_apply(f8_system_t *system, f8_settings_t settings);
+
+u8 f8_settings_apply_default(f8_system_t *system);
 
 u8 f8_system_init(f8_system_t *system, const system_preset_t *preset);
 
