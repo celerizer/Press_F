@@ -53,6 +53,10 @@ MainWindow::MainWindow()
   connect(ActEjectCart, SIGNAL(triggered()), this, SLOT(onEjectCart()));
   ButFile->addAction(ActEjectCart);
 
+  QAction *ActReset = new QAction(QIcon(":/icons/logo"), tr("Reset"));
+  connect(ActReset, SIGNAL(triggered()), this, SLOT(onReset()));
+  ButFile->addAction(ActReset);
+
   QToolButton *ButOne = new QToolButton(this);
   ButOne->setText("1 / TIME");
   connect(ButOne, SIGNAL(clicked()), this, SLOT(onButton1()));
@@ -191,8 +195,13 @@ bool MainWindow::loadCartridge(QString Filename)
     return false;
   else
   {
-    Rom.read(reinterpret_cast<char*>(g_ChannelF.f8devices[8].data), 0x400);
-    Rom.read(reinterpret_cast<char*>(g_ChannelF.f8devices[9].data), 0x400);
+    for (unsigned i = 0; i < Rom.size(); i += 0x0400)
+    {
+      u8 temp[0x0400];
+
+      Rom.read(reinterpret_cast<char*>(temp), sizeof(temp));
+      f8_write(&g_ChannelF, 0x0800 + i, temp, sizeof(temp));
+    }
 
     /*
       Update the window title to something friendly looking, ie:
@@ -230,6 +239,11 @@ void MainWindow::onLoadCart()
 {
   loadCartridge(QFileDialog::getOpenFileName(this,
     tr("Load Cartridge"), "./games", tr("Channel F ROM Files (*.bin *.chf)")));
+}
+
+void MainWindow::onReset()
+{
+  pressf_reset(&g_ChannelF);
 }
 
 bool MainWindow::wasClicked(unsigned index)

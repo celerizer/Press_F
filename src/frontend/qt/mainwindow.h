@@ -48,6 +48,7 @@ private slots:
   void onEjectCart();
   void onFrame();
   void onLoadCart();
+  void onReset();
 
 protected:
   void closeEvent    (QCloseEvent *event)     override;
