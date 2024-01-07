@@ -21,6 +21,7 @@ SOURCES_C := \
    $(CORE_DIR)/font.c \
    $(CORE_DIR)/hle.c \
    $(CORE_DIR)/hw/2102.c \
+   $(CORE_DIR)/hw/2114.c \
    $(CORE_DIR)/hw/3850.c \
    $(CORE_DIR)/hw/3851.c \
    $(CORE_DIR)/hw/beeper.c \
