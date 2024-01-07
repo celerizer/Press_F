@@ -1279,11 +1279,14 @@ u8 pressf_init(f8_system_t *system)
 {
    u32 i = 0;
 
-   for (i = 0x00; i < 0x04; i++)
-   {
-      operations[0x00 + i] = lr_a_dpchr;
-      operations[0x04 + i] = lr_dpchr_a;
-   }
+   operations[0x00] = lr_a_ku;
+   operations[0x01] = lr_a_kl;
+   operations[0x02] = lr_a_qu;
+   operations[0x03] = lr_a_ql;
+   operations[0x04] = lr_ku_a;
+   operations[0x05] = lr_kl_a;
+   operations[0x06] = lr_qu_a;
+   operations[0x07] = lr_ql_a;
    operations[0x08] = lr_k_pc1;
    operations[0x09] = lr_pc1_k;
    operations[0x0A] = lr_a_isar;
