@@ -153,51 +153,81 @@ static f8_byte *isar(f8_system_t *system)
   return address;
 }
 
-static f8_byte *dpchr(f8_system_t *system)
-{
-  f8_byte opcode = system->dbus;
-
-  /* Last 2 bits only */
-  opcode.u &= B00000011;
-  switch (opcode.u)
-  {
-  case 0:
-    return &KU;
-  case 1:
-    return &KL;
-  case 2:
-    return &QU;
-  case 3:
-    return &QL;
-  }
-
-  /* Cannot be reached */
-  return NULL;
-}
-
 static void update_status(f8_system_t *system)
 {
   add(system, &A, 0);
 }
 
-/*
-   00 - 03
-   LR A, DPCHR
-   Load a byte from either K or Q into the accumulator (see dpchr()).
-*/
-F8_OP(lr_a_dpchr)
+/**
+ * 00
+ * LR A, KU
+ */
+F8_OP(lr_a_ku)
 {
-  A = *dpchr(system);
+  A = KU;
 }
 
-/*
-   04 - 07
-   LR DPCHR, A
-   Load the accumulator into a byte from either K or Q (see dpchr()).
-*/
-F8_OP(lr_dpchr_a)
+/**
+ * 01
+ * LR A, KL
+ */
+F8_OP(lr_a_kl)
 {
-   *dpchr(system) = A;
+  A = KL;
+}
+
+/**
+ * 02
+ * LR A, QU
+ */
+F8_OP(lr_a_qu)
+{
+  A = QU;
+}
+
+/**
+ * 03
+ * LR A, QL
+ */
+F8_OP(lr_a_ql)
+{
+  A = QL;
+}
+
+/**
+ * 04
+ * LR KU, A
+ */
+F8_OP(lr_ku_a)
+{
+  KU = A;
+}
+
+/**
+ * 05
+ * LR KL, A
+ */
+F8_OP(lr_kl_a)
+{
+  KL = A;
+}
+
+/**
+ * 06
+ * LR QU, A
+ */
+F8_OP(lr_qu_a)
+{
+  QU = A;
+}
+
+/**
+ * 07
+ * LR QL, A
+ */
+F8_OP(lr_ql_a)
+{
+  QL = A;
 }
 
 /*
@@ -1225,8 +1255,8 @@ F8_OP(invalid)
 typedef void F8_OP_T(f8_system_t*);
 static F8_OP_T *guh[256] =
 {
-  lr_a_dpchr, lr_a_dpchr, lr_a_dpchr, lr_a_dpchr,
-  lr_dpchr_a, lr_dpchr_a, lr_dpchr_a, lr_dpchr_a,
+  lr_a_ku,    lr_a_kl,    lr_a_qu,    lr_a_ql,
+  lr_ku_a,    lr_kl_a,    lr_qu_a,    lr_ql_a,
   lr_k_pc1,   lr_pc1_k,   lr_a_isar,  lr_isar_a,
   pk,         lr_pc0_q,   lr_q_dc0,   lr_dc0_q,
 
