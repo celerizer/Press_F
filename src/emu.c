@@ -72,7 +72,7 @@ int get_status(f8_system_t *system, const unsigned flag)
 
 void set_status(f8_system_t *system, const unsigned flag, unsigned enable)
 {
-  W = enable ? W | flag : W & ~flag;
+  W = (unsigned char)(enable ? W | flag : W & ~flag);
 }
 
 void add(f8_system_t *system, f8_byte *dest, unsigned src)
@@ -91,7 +91,7 @@ void add(f8_system_t *system, f8_byte *dest, unsigned src)
   /* We overflowed up or down if result goes beyond 8 bit (changed sign) */
   set_status(system, STATUS_OVERFLOW, ((result ^ dest->u) & (result ^ src) & 0x80));
 
-  dest->u = result;
+  dest->u = (unsigned char)result;
 }
 
 /**
@@ -117,7 +117,7 @@ void add_bcd(f8_system_t *system, f8_byte *augend, unsigned addend)
   else if (c && !ic)
     tmp = (tmp & 0xf0) + ((tmp + 0x0a) & 0x0f);
 
-  augend->u = tmp;
+  augend->u = (unsigned char)tmp;
 }
 
 /**
@@ -1122,10 +1122,12 @@ F8_OP(ins)
 #if PF_ROMC
   io_t *io = &system->io_ports[system->dbus.u & B00001111];
 
+  romc1c(system);
+
   if (io->func_in)
     io->func_in(io->device_in, &io->data);
-
   A = io->data;
+
   add(system, &A, 0);
 #else
   if (port == 0)

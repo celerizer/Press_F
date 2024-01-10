@@ -62,16 +62,16 @@ const system_preset_t pf_systems[] =
       { F8_DEVICE_MK4027, 3, 0, 0, NULL, mk4027_write },
       { F8_DEVICE_MK4027, 3, 1, 0, NULL, NULL },
       { F8_DEVICE_MK4027, 3, 4, 0, NULL, NULL },
-      /* { F8_DEVICE_MK4027, 3, 5, 0, NULL, NULL }, */
+      { F8_DEVICE_MK4027, 3, 5, 0, NULL, NULL },
 
       /* Selector Control buttons (5 buttons on the game console) */
       { F8_DEVICE_SELECTOR_CONTROL, 4, 0, 0, selector_control_input, NULL },
 
       /* Left Hand-Controller */
-      { F8_DEVICE_HAND_CONTROLLER, 5, 4, 0, hand_controller_input, NULL },
+      { F8_DEVICE_HAND_CONTROLLER, 5, 4, 0, hand_controller_input_4, NULL },
 
       /* Right Hand-Controller */
-      { F8_DEVICE_HAND_CONTROLLER, 6, 1, 0, hand_controller_input, NULL },
+      { F8_DEVICE_HAND_CONTROLLER, 6, 1, 0, hand_controller_input_1, NULL },
 
       /* Beeper */
       { F8_DEVICE_BEEPER, 7, 5, 0, NULL, beeper_out },
@@ -85,6 +85,12 @@ const system_preset_t pf_systems[] =
       { F8_DEVICE_3851, 13, 0, 0x1C00, NULL, NULL },
       { F8_DEVICE_3851, 14, 0, 0x2000, NULL, NULL },
       { F8_DEVICE_3851, 15, 0, 0x2400, NULL, NULL },
+
+      { F8_DEVICE_2114, 16, 0, 0x2800, NULL, NULL },
+      { F8_DEVICE_2114, 17, 0, 0x2A00, NULL, NULL },
+      { F8_DEVICE_2114, 18, 0, 0x2C00, NULL, NULL },
+      { F8_DEVICE_2114, 19, 0, 0x2E00, NULL, NULL },
+      { F8_DEVICE_SCHACH_LED, 20, 0, 0x3800, NULL, NULL },
 
       { F8_DEVICE_INVALID, 0, 0, 0, NULL, NULL }
     }
