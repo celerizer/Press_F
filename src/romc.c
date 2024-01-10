@@ -54,6 +54,8 @@ void romc00(f8_system_t *system)
 
 #if !PF_ROMC_REDUNDANCY
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     if (f8device_contains(device, device->pc0))
     {
       system->dbus = *f8device_vptr(device, device->pc0);
@@ -146,6 +148,8 @@ void romc04(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC1)
+      continue;
     device->pc0 = device->pc1;
   }
 
@@ -229,6 +233,8 @@ void romc09(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_DC0)
+      continue;
     if (f8device_contains(device, device->dc0))
       system->dbus.u = device->dc0 & 0xFF;
   }
@@ -246,6 +252,8 @@ void romc0a(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_DC0)
+      continue;
     device->dc0 += system->dbus.s;
   }
 
@@ -263,6 +271,8 @@ void romc0b(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC1)
+      continue;
     if (f8device_contains(device, device->pc1))
       system->dbus.u = device->pc1 & 0xFF;
   }
@@ -282,6 +292,8 @@ void romc0c(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     if (f8device_contains(device, device->pc0))
     {
       system->dbus = *f8device_vptr(device, device->pc0);
@@ -308,6 +320,8 @@ void romc0d(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC1)
+      continue;
     device->pc1 = device->pc0 + 1;
   }
 
@@ -325,6 +339,8 @@ void romc0e(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     if (f8device_contains(device, device->pc0))
     {
       system->dbus = *f8device_vptr(device, device->pc0);
@@ -334,6 +350,8 @@ void romc0e(f8_system_t *system)
     }
   }
   FOREACH_DEVICE
+    if (device->flags & F8_NO_DC0)
+      continue;
     device->dc0 &= 0xFF00;
     device->dc0 |= system->dbus.u;
   }
@@ -358,6 +376,8 @@ void romc0f(f8_system_t *system)
     order byte of the interrupt vector on the data bus.
   */
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     device->pc1 = device->pc0;
     device->pc0 &= 0xFF00;
     device->pc0 |= system->dbus.u;
@@ -387,6 +407,8 @@ void romc11(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     if (f8device_contains(device, device->pc0))
       system->dbus = *f8device_vptr(device, device->pc0);
 #if PF_ROMC_REDUNDANCY
@@ -394,6 +416,8 @@ void romc11(f8_system_t *system)
 #endif
   }
   FOREACH_DEVICE
+    if (device->flags & F8_NO_DC0)
+      continue;
     device->dc0 &= 0x00FF;
     device->dc0 |= system->dbus.u << 8;
   }
@@ -411,6 +435,8 @@ void romc12(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
+    if (device->flags & F8_NO_PC0)
+      continue;
     device->pc1 = device->pc0;
     device->pc0 &= 0xFF00;
     device->pc0 |= system->dbus.u;
@@ -605,7 +631,7 @@ void romc1e(f8_system_t *system)
   INIT_DEVICES
 
   FOREACH_DEVICE
-    if (device->flags & F8_NO_PC1)
+    if (device->flags & F8_NO_PC0)
       continue;
     else if (f8device_contains(device, device->pc0))
     {

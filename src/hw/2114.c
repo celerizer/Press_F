@@ -10,5 +10,6 @@ void f2114_init(f8_device_t *device)
     f8_generic_init(device, 1024 * 4 / 8);
     device->name = name;
     device->type = type;
+    device->flags = F8_DATA_WRITABLE;
   }
 }

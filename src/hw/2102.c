@@ -87,6 +87,7 @@ void f2102_init(f8_device_t *device)
      device->device = (f2102_t*)calloc(sizeof(f2102_t), 1);
      device->name = name;
      device->type = type;
+     device->flags = F8_NO_ROMC;
    }
 }
 

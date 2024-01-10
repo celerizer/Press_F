@@ -11,6 +11,7 @@ void schach_led_init(f8_device_t *device)
     f8_generic_init(device, 256);
     device->name = name;
     device->type = type;
+    device->flags = F8_DATA_WRITABLE;
 
     device->init = schach_led_init;
   }
