@@ -26,6 +26,8 @@ typedef union
 #define NULL 0
 #endif
 
+#define F8_UNUSED(a) (void)a
+
 /* 2-bit binary constants */
 #define B00 0x0
 #define B01 0x1

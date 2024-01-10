@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "../input.h"
 #include "selector_control.h"
 
@@ -8,6 +6,7 @@ static const unsigned type = F8_DEVICE_SELECTOR_CONTROL;
 
 F8D_OP_IN(selector_control_input)
 {
+  F8_UNUSED(device);
   io_data->u = get_input(0);
 }
 
