@@ -10,5 +10,6 @@ void f3851_init(f8_device_t *device)
     f8_generic_init(device, 1024);
     device->name = name;
     device->type = type;
+    device->flags = F8_HAS_COPYRIGHTED_DATA;
   }
 }

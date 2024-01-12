@@ -708,13 +708,6 @@ F8_OP(pi)
   romc0c(system);
   system->dbus = A;
   romc14(system);
-/*
-  A = get_immediate(system);
-  PC1 = PC0 + 2;//hack
-  PC0 = (get_immediate(system)) & 0xFF;
-  PC0 |= (A << 8);
-  PC0--; //hack
-*/
 }
 
 /**
@@ -1080,9 +1073,10 @@ F8_OP(adc)
 F8_OP(br7)
 {
 #if PF_ROMC
-  romc03(system);
   if ((ISAR & B00000111) != B00000111)
     romc01(system);
+  else
+    romc03(system);
 #else
   if ((ISAR & 7) != 7)
     PC0 += (i8)next_op(system);
