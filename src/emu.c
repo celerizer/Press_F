@@ -1156,7 +1156,11 @@ F8_OP(outs)
   romc1c(system);
 
   if (io->func_out)
+  {
+    if (io->device_out->set_timing)
+      io->device_out->set_timing(io->device_out, system->cycles, system->total_cycles);
     io->func_out(io->device_out, &io->data, A);
+  }
   else
     io->data = A;
 #else
@@ -1393,7 +1397,7 @@ u8 pressf_init(f8_system_t *system)
    operations[0xEF] = invalid;
    operations[0xFF] = invalid;
 
-   system->total_cycles = 30000;
+   system->total_cycles = 60000;
 
    f3850_init(&system->f8devices[0]);
 
@@ -1431,18 +1435,26 @@ void pressf_step(f8_system_t *system)
 
 u8 pressf_run(f8_system_t *system)
 {
-#if PRESS_F_SAFETY
   if (!system)
     return FALSE;
-#endif
-
-  system->cycles -= system->total_cycles;
-  if (system->cycles < 0)
-    system->cycles = 0;
-  do
+  else
   {
-    pressf_step(system);
-  } while (system->total_cycles > system->cycles);
+    unsigned i;
+
+    system->cycles -= system->total_cycles;
+    if (system->cycles < 0)
+      system->cycles = 0;
+    do
+    {
+      pressf_step(system);
+    } while (system->total_cycles > system->cycles);
+
+    for (i = 0; i < system->f8device_count; i++)
+    {
+      if (system->f8devices[i].finish_frame)
+        system->f8devices[i].finish_frame(&system->f8devices[i]);
+    }
+  }
 
   return TRUE;
 }

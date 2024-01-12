@@ -73,11 +73,6 @@ typedef enum
 */
 #define F8_HAS_BATTERY (1 << 6)
 
-/**
- * The device will be accessed via one or more IO ports.
- **/
-#define F8_HAS_PORT_HOOKUPS (1 << 7)
-
 typedef struct f8_device_t
 {
   const char *name;
@@ -116,11 +111,23 @@ typedef struct f8_device_t
   Device-specific behavior
 */
   void *device;
-  void (*init)       (struct f8_device_t *device);
-  void (*free)       (struct f8_device_t *device);
-  void (*reset)      (struct f8_device_t *device);
-  void (*serialize)  (struct f8_device_t *device);
+  void (*init)(struct f8_device_t *device);
+  void (*free)(struct f8_device_t *device);
+  void (*reset)(struct f8_device_t *device);
+  void (*serialize)(struct f8_device_t *device);
   void (*unserialize)(struct f8_device_t *device);
+
+  /**
+   * A pointer to a function that informs the device of the point of execution
+   * in the current frame
+   */
+  void (*set_timing)(struct f8_device_t *device, int current, int total);
+
+  /**
+   * A pointer to a function that is called at the end of a frame, to finalize
+   * any data sent to the device
+   */
+  void (*finish_frame)(struct f8_device_t *device);
 } f8_device_t;
 
 #define F8D_OP_IN(a) void a(f8_device_t *device, f8_byte *io_data)
