@@ -51,6 +51,9 @@ u8 f8_device_init(f8_device_t *device, const f8_device_id_t type)
     case F8_DEVICE_2114:
       device->init = f2114_init;
       break;
+    case F8_DEVICE_2102:
+      device->init = f2102_init;
+      break;
     default:
       return FALSE;
     }
@@ -136,6 +139,8 @@ unsigned f8_read(f8_system_t *system, void *dest, unsigned address,
   {
     f8_device_t *device = &system->f8devices[i];
 
+    if (device->flags & F8_NO_ROMC)
+      continue;
     if (device->length && address >= device->start && address <= device->end)
     {
       memcpy(dest, &device->data[address - device->start], size);
@@ -158,6 +163,8 @@ unsigned f8_write(f8_system_t *system, unsigned address, const void *src,
   {
     f8_device_t *device = &system->f8devices[i];
 
+    if (device->flags & F8_NO_ROMC)
+      continue;
     if (device->length && address >= device->start && address <= device->end)
     {
       memcpy(&device->data[address - device->start], src, size);

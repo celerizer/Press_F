@@ -30,52 +30,61 @@ static int type = F8_DEVICE_2102;
 #define BIT_IN  B00001000
 #define BIT_OUT B10000000
 
+F8D_OP_OUT(f2102_out_address)
+{
+  f2102_t *m_f2102 = (f2102_t*)device->device;
+  u16 address = 0;
+
+  /* P0 -> A0 */
+  address |= (value.u & B00000001);
+  /* P4 -> A1 */
+  address |= (value.u & B00010000) >> 3;
+  /* P1 -> A4 */
+  address |= (value.u & B00000010) << 3;
+  /* P2 -> A5 */
+  address |= (value.u & B00000100) << 3;
+  /* P3 -> A6 */
+  address |= (value.u & B00001000) << 3;
+  /* P5 -> A7 */
+  address |= (value.u & B00100000) << 2;
+  /* P6 -> A8 */
+  address |= (value.u & B01000000) << 2;
+  /* P7 -> A9 */
+  address |= (value.u & B10000000) << 2;
+
+  m_f2102->address = (m_f2102->address & B00001100) | address;
+
+  *io_data = value;
+}
+
 /**
  * Used for the last 2 addressing bits and to send/receive data.
  * Hooked to port 25 on Videocart 10
  * Hooked to port 21 on Videocart 18
  */
-F8D_OP_OUT(f2102_write)
+F8D_OP_OUT(f2102_out_write)
 {
   f2102_t *m_f2102 = (f2102_t*)device->device;
   u16 address = 0;
-  const unsigned addr_io_a = m_f2102->io_address->u;
-  unsigned addr_io_b = value.u;
   f8_byte *data;
   int bit;
 
-  /* Rearrange the other bits into this weird order */
-  /* P0 -> A0 */
-  address |= (addr_io_a & B00000001);
-  /* P4 -> A1 */
-  address |= (addr_io_a & B00010000) >> 3;
-  /* P1 -> A4 */
-  address |= (addr_io_a & B00000010) << 3;
-  /* P2 -> A5 */
-  address |= (addr_io_a & B00000100) << 3;
-  /* P3 -> A6 */
-  address |= (addr_io_a & B00001000) << 3;
-  /* P5 -> A7 */
-  address |= (addr_io_a & B00100000) << 2;
-  /* P6 -> A8 */
-  address |= (addr_io_a & B01000000) << 2;
-  /* P7 -> A9 */
-  address |= (addr_io_a & B10000000) << 2;
-
   /* P2 -> A2 */
-  address |= (addr_io_b & B00000100);
+  address |= (value.u & B00000100);
   /* P1 -> A3 */
-  address |= (addr_io_b & B00000010) << 2;
+  address |= (value.u & B00000010) << 2;
+
+  m_f2102->address = (m_f2102->address & B11110011) | address;
 
   data = &device->data[address / 8];
   bit = (1 << (address % 8));
 
   /* Are we writing data? */
-  if (addr_io_b & BIT_RW)
-    data->u = (addr_io_b & BIT_IN) ? (data->u & bit) : (data->u & ~bit);
+  if (value.u & BIT_RW)
+    data->u = (value.u & BIT_IN) ? (data->u & bit) : (data->u & ~bit);
   /* No, we're reading it. */
   else
-    io_data->u = (data->u & bit) ? (addr_io_b & BIT_OUT) : (addr_io_b & ~BIT_OUT);
+    io_data->u = (data->u & bit) ? (value.u & BIT_OUT) : (value.u & ~BIT_OUT);
 }
 
 void f2102_init(f8_device_t *device)
@@ -84,7 +93,9 @@ void f2102_init(f8_device_t *device)
      return;
    else
    {
-     device->device = (f2102_t*)calloc(sizeof(f2102_t), 1);
+     f2102_t *m_f2102 = (f2102_t*)calloc(sizeof(f2102_t), 1);
+     device->device = m_f2102;
+     device->data = m_f2102->data;
      device->name = name;
      device->type = type;
      device->flags = F8_NO_ROMC;

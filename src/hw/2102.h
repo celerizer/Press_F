@@ -8,11 +8,11 @@
 typedef struct f2102_t
 {
   f8_byte data[F2102_SIZE];
-  f8_byte *io_write;
-  f8_byte *io_address;
+  u16 address;
 } f2102_t;
 
-F8D_OP_OUT(f2102_write);
+F8D_OP_OUT(f2102_out_address);
+F8D_OP_OUT(f2102_out_write);
 
 void f2102_init(f8_device_t *device);
 

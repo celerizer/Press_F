@@ -16,8 +16,8 @@ const software_t pf_software[] =
       0x0a948b61
     },
     {
-      { F8_DEVICE_2102, 0, 25, 0, NULL, f2102_write },
-      { F8_DEVICE_2102, 0, 24, 0, NULL, NULL }
+      { F8_DEVICE_2102, 0, 0x25, 0, NULL, f2102_out_write },
+      { F8_DEVICE_2102, 0, 0x24, 0, NULL, f2102_out_address }
     }
   },
   {
@@ -27,8 +27,8 @@ const software_t pf_software[] =
       0x9238d6ce
     },
     {
-      { F8_DEVICE_2102, 0, 21, 0, NULL, f2102_write },
-      { F8_DEVICE_2102, 0, 20, 0, NULL, NULL },
+      { F8_DEVICE_2102, 0, 0x21, 0, NULL, f2102_out_write },
+      { F8_DEVICE_2102, 0, 0x20, 0, NULL, f2102_out_address },
     }
   },
   {
