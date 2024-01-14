@@ -5,9 +5,9 @@
 
 typedef struct opcode_t
 {
-   u8          length;
-   const char *format;
-   const char *description;
+  unsigned length;
+  const char *format;
+  const char *description;
 } opcode_t;
 
 extern opcode_t opcodes[256];

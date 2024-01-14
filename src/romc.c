@@ -168,7 +168,7 @@ void romc05(f8_system_t *system)
   FOREACH_DEVICE
     if (device->flags & F8_NO_DC0)
       continue;
-    if (f8device_contains(device, device->dc0) && device->flags & F8_DATA_WRITABLE)
+    if (f8device_contains(device, device->dc0) && (device->flags & F8_DATA_WRITABLE))
       f8device_write(device, device->dc0, system->dbus);
     device->dc0++;
   }
