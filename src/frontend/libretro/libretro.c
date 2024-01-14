@@ -4,6 +4,7 @@
 
 #include "emu.h"
 #include "font.h"
+#include "hw/beeper.h"
 #include "hw/system.h"
 #include "hw/vram.h"
 #include "input.h"
@@ -253,9 +254,13 @@ bool retro_load_game(const struct retro_game_info *info)
 {
   if (info && info->data && info->size)
   {
-    f8_write(&retro_channelf, 0x800, info->data, 0x400);
-    if (info->size > 0x400)
-      f8_write(&retro_channelf, 0xC00, &info->data[0x400], 0x400);
+    for (unsigned i = 0; i < info->size; i += 0x0400)
+    {
+      u8 temp[0x0400];
+
+      memcpy(temp, &((u8*)info->data)[i], sizeof(temp));
+      f8_write(&retro_channelf, 0x0800 + i, temp, sizeof(temp));
+    }
 
     return true;
   }
@@ -291,8 +296,18 @@ void retro_run(void)
   pressf_run(&retro_channelf);
 
   /* Update audio */
-  sound_write();
-  audio_batch_cb(samples, PF_SAMPLES);
+  for (int i = 0; i < retro_channelf.f8device_count; i++)
+  {
+    f8_device_t* device = &retro_channelf.f8devices[i];
+
+    if (device->type == F8_DEVICE_BEEPER)
+    {
+      f8_beeper_t *beeper = (f8_beeper_t*)device->device;
+
+      audio_batch_cb(beeper->samples, PF_SAMPLES);
+      break;
+    }
+  }
 
   /* Update video */
   lr_video_draw(((vram_t*)retro_channelf.f8devices[3].device)->data, screen_buffer);
