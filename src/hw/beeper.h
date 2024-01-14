@@ -10,7 +10,7 @@ typedef struct
   int total_cycles;
   int frequency_last;
   unsigned last_tick;
-  float amplitude;
+  double amplitude;
   unsigned time;
   short frequencies[PF_SAMPLES];
   i16 samples[PF_SAMPLES * 2];
