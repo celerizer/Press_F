@@ -615,7 +615,7 @@ void romc1d(f8_system_t *system)
       continue;
     temp = device->dc0;
     device->dc0 = device->dc1;
-    device->dc0 = temp;
+    device->dc1 = temp;
   }
 
   system->cycles += CYCLE_SHORT;
