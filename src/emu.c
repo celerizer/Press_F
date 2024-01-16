@@ -1400,7 +1400,7 @@ u8 pressf_init(f8_system_t *system)
 
 /**
  * Has the F8 system execute one instruction.
- **/
+ */
 void pressf_step(f8_system_t *system)
 {
 #if PF_HAVE_HLE_BIOS

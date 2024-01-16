@@ -3,6 +3,8 @@
 static const char *name = "Schach LED";
 static const int type = F8_DEVICE_SCHACH_LED;
 
+/* Appears to write 0xC0 to first byte to turn light on, 0x00 to turn it off */
+
 void schach_led_init(f8_device_t *device)
 {
   if (device)
