@@ -5,6 +5,7 @@
 
 #include "hle.h"
 #include "screen.h"
+#include "hw/vram.h"
 
 #define HLE(a) void a(f8_system_t *system)
 
@@ -15,88 +16,82 @@ HLE(reset)
 }
 
 /* 0001 - 0019 */
-/*
 HLE(init)
 {
   f3850_t *cpu = f8_main_cpu(system);
-  u8 check_byte;
+  f8_byte check_byte;
 
-  /* 0001 - 0009
-  /* Reset all scratchpad registers to 00
+  /*
+   * 0001 - 0009
+   * Reset all scratchpad registers to 00
+   */
   memset(cpu->scratchpad, 0, SCRATCH_SIZE);
 
-  /* 000A - 000E
-  /* Initialize the stack pointer
+  /*
+   * 000A - 000E
+   * Initialize the stack pointer
+   */
   cpu->accumulator.u = 40;
   cpu->scratchpad[59].u = 40;
 
-  /* 000F - 0019 */
-  /* Jump to either the built-in game or the inserted cartridge
-  if (!f8_read(system, &check_byte, 0x0800, 1) || check_byte != 0x55)
-    system->pc0 = 0x001A - 1;
+  /*
+   * 000F - 0019
+   * Jump to either the built-in game or the inserted cartridge
+   */
+  if (!f8_read(system, &check_byte, 0x0800, 1) || check_byte.u != 0x55)
+    f8_main_cpu_device(system)->pc0 = 0x001A - 1;
   else
-    system->pc0 = 0x0802 - 1;
+    f8_main_cpu_device(system)->pc0 = 0x0802 - 1;
 }
-*/
 
 /* 001A - 001F */
-/*
 HLE(no_cart_init)
 {
-  /* Run the screen clear routine
+  /* Run the screen clear routine */
   f8_main_cpu(system)->scratchpad[0x03].u = 0xD6;
-  system->pc0 = 0x00D0 - 1;
+  f8_main_cpu_device(system)->pc0 = 0x00D0 - 1;
 }
-*/
 
 /* 00D0 - 00D5 */
-/*
 HLE(clear_screen)
 {
-  memset(system->vram, 0, sizeof(system->vram));
-  system->pc0 = system->pc1 - 1;
+  memset(((vram_t*)system->f8devices[3].device)->data, 0, VRAM_SIZE);
+  f8_main_cpu_device(system)->pc0 = f8_main_cpu_device(system)->pc1 - 1;
 }
-*/
 
 /*
-   push_k
-   0107 - 011D
-   ---
-   Pushes a word from K (r12-13) onto the stack.
-   ---
-   Modifies: R7
-*/
-/*
+ * push_k
+ * 0107 - 011D
+ * Pushes a word from K (r12-13) onto the stack.
+ * Modifies: R7
+ */
 HLE(push_k)
 {
-   u8 stack = f8_main_cpu(system)->scratchpad[59] & 0x3F;
+  f8_byte stack;
 
-   f8_main_cpu(system)->scratchpad[7] = f8_main_cpu(system)->isar;
-   memcpy(&f8_main_cpu(system)->scratchpad[stack], &f8_main_cpu(system)->scratchpad[12], 2);
-   f8_main_cpu(system)->scratchpad[59] = stack + 2;
+  stack.u = f8_main_cpu(system)->scratchpad[59].u & B00111111;
 
-   system->pc0 = system->pc1 - 1;
+  f8_main_cpu(system)->scratchpad[7].u = f8_main_cpu(system)->isar;
+  memcpy(&f8_main_cpu(system)->scratchpad[stack.u], &f8_main_cpu(system)->scratchpad[12], 2);
+  f8_main_cpu(system)->scratchpad[59].u = stack.u + 2;
+
+  f8_main_cpu_device(system)->pc0 = f8_main_cpu_device(system)->pc1 - 1;
 }
-*/
 
 /*
-   pop_k
-   011E - 0134
-   ---
-   Pops a word from the stack into K (r12-13).
-   ---
-   Modifies: R7
-*/
-/*
+ * pop_k
+ * 011E - 0134
+ * Pops a word from the stack into K (r12-13).
+ * Modifies: R7
 HLE(pop_k)
 {
-   u8 stack = (system->c3850.scratchpad[59] & 0x3F) - 2;
+  u8 stack = (system->c3850.scratchpad[59] & 0x3F) - 2;
 
-   system->c3850.scratchpad[7] = system->c3850.isar;
-   memcpy(&system->c3850.scratchpad[12], &system->c3850.scratchpad[stack], 2);
-   system->c3850.scratchpad[59] = stack;
+  system->c3850.scratchpad[7] = system->c3850.isar;
+  memcpy(&system->c3850.scratchpad[12], &system->c3850.scratchpad[stack], 2);
+  system->c3850.scratchpad[59] = stack;
 
-   system->pc0 = system->pc1 - 1;
+  system->pc0 = system->pc1 - 1;
 }
 */
 
@@ -158,7 +153,6 @@ HLE(drawchar_sys)
 
 void* hle_get_func_from_addr(u16 address)
 {
-  /*
   switch (address)
   {
   case 0x0000:
@@ -167,6 +161,7 @@ void* hle_get_func_from_addr(u16 address)
     return init;
   case 0x001A:
     return no_cart_init;
+  /*
   case 0x00D0:
     return clear_screen;
   case 0x0107:
@@ -177,8 +172,8 @@ void* hle_get_func_from_addr(u16 address)
     return drawchar_sys;
   case 0x067C:
     return drawchar;
-  }
   */
+  }
 
   return NULL;
 }
