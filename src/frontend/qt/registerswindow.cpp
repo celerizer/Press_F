@@ -110,7 +110,7 @@ RegistersWindow::RegistersWindow()
     if (rom[i].u < 16)
       snprintf(temp_string, 256, opcodes[rom[i].u].format, rom[i].u, rom[i + 1].u, rom[i + 2].u);
     else
-      snprintf(temp_string, 256, "Command: %02X", rom[i]);
+      snprintf(temp_string, 256, "Command: %02X", rom[i].u);
     m_CommandsList->setItem(i, 1, new QTableWidgetItem(QString(temp_string)));
   }
 
