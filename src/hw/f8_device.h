@@ -99,7 +99,7 @@ typedef struct f8_device_t
   u16   length;
   u16   mask;
 
-  int type;
+  f8_device_id_t type;
 
 /*
   Bitfield specifying some properties of the device and how to access it.
@@ -114,25 +114,52 @@ typedef struct f8_device_t
   void (*init)(struct f8_device_t *device);
   void (*free)(struct f8_device_t *device);
   void (*reset)(struct f8_device_t *device);
+
+  /**
+   * A pointer to a function that outputs serialized data for the machine
+   * state. For example, for savestates, rewind, and netplay.
+   */
   void (*serialize)(struct f8_device_t *device);
+
+  /**
+   * A pointer to a function that reads in serialized data. For example, for
+   * savestates, rewind, and netplay.
+   */
   void (*unserialize)(struct f8_device_t *device);
 
   /**
    * A pointer to a function that informs the device of the point of execution
-   * in the current frame
+   * in the current frame. Called before inputting or outputting data for this
+   * port. For example, outputting sound in the correct spot on a waveform.
    */
   void (*set_timing)(struct f8_device_t *device, int current, int total);
 
   /**
    * A pointer to a function that is called at the end of a frame, to finalize
-   * any data sent to the device
+   * any data sent to the device over the course of a frame. For example,
+   * rasterizing a framebuffer after a series of VRAM calls.
    */
   void (*finish_frame)(struct f8_device_t *device);
 } f8_device_t;
 
+/**
+ * A function called on an F8 device when the main CPU executes an IN or
+ * INS instruction.
+ * The accumulator is then set to the value in "io_data" automatically.
+ */
 #define F8D_OP_IN(a) void a(f8_device_t *device, f8_byte *io_data)
+
+/**
+ * A function called on an F8 device when the main CPU executes an OUT or
+ * OUTS instruction.
+ * Implementations of this function must set "io_data" to "value".
+ */
 #define F8D_OP_OUT(a) void a(f8_device_t *device, f8_byte *io_data, f8_byte value)
+
+/** @see F8D_OP_IN */
 typedef void F8D_OP_IN_T(f8_device_t*, f8_byte*);
+
+/** @see F8D_OP_OUT */
 typedef void F8D_OP_OUT_T(f8_device_t*, f8_byte*, f8_byte);
 
 void f8_generic_init(f8_device_t *device, unsigned size);
