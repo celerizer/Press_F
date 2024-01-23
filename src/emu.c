@@ -5,10 +5,7 @@
 #include "debug.h"
 #include "emu.h"
 #include "hle.h"
-#include "input.h"
 #include "romc.h"
-#include "screen.h"
-#include "sound.h"
 
 #define A    ((f3850_t*)system->f8devices[0].device)->accumulator
 #define ISAR ((f3850_t*)system->f8devices[0].device)->isar

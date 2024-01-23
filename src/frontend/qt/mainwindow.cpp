@@ -6,7 +6,6 @@ extern "C"
   #include "../../emu.h"
   #include "../../font.h"
   #include "../../input.h"
-  #include "../../sound.h"
   #include "../../hw/beeper.h"
   #include "../../hw/system.h"
 }
@@ -84,7 +83,7 @@ MainWindow::MainWindow()
 
   /* Init sound */
   QAudioFormat Format;
-  Format.setSampleRate(PF_FREQUENCY);
+  Format.setSampleRate(PF_SOUND_FREQUENCY);
   Format.setChannelCount(2);
   Format.setSampleType(QAudioFormat::SignedInt);
   Format.setSampleSize(16);
@@ -175,11 +174,11 @@ void MainWindow::onFrame()
 
     if (device->type == F8_DEVICE_BEEPER)
     {
-      m_AudioBuffer.append(reinterpret_cast<const char*>(((f8_beeper_t*)device->device)->samples), PF_SAMPLES * 4);
-      if (m_AudioBuffer.size() > PF_SAMPLES * 4 * 2)
+      m_AudioBuffer.append(reinterpret_cast<const char*>(((f8_beeper_t*)device->device)->samples), PF_SOUND_SAMPLES * 4);
+      if (m_AudioBuffer.size() > PF_SOUND_SAMPLES * 4 * 2)
       {
-        m_AudioDevice->write(m_AudioBuffer.data(), PF_SAMPLES * 4);
-        m_AudioBuffer.remove(0, static_cast<int>(PF_SAMPLES * 4));
+        m_AudioDevice->write(m_AudioBuffer.data(), PF_SOUND_SAMPLES * 4);
+        m_AudioBuffer.remove(0, static_cast<int>(PF_SOUND_SAMPLES * 4));
       }
       break;
     }

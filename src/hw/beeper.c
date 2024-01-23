@@ -1,6 +1,5 @@
 #include <stdlib.h>
 
-#include "../sound.h"
 #include "../wave.h"
 
 #include "beeper.h"
@@ -18,7 +17,7 @@ static const i16 SOUND_FREQUENCIES[4] =
 
 static void sound_push_back(f8_beeper_t *beeper, unsigned frequency)
 {
-  unsigned current_tick = PF_SAMPLES * ((double)beeper->current_cycles /
+  unsigned current_tick = PF_SOUND_SAMPLES * ((double)beeper->current_cycles /
                                         (double)beeper->total_cycles);
 
   if (current_tick != beeper->last_tick)
@@ -51,13 +50,13 @@ void beeper_finish_frame(f8_device_t *device)
   unsigned i;
 
   /* Fill any unwritten samples with the last known tone */
-  if (m_beeper->last_tick != PF_SAMPLES - 1)
+  if (m_beeper->last_tick != PF_SOUND_SAMPLES - 1)
   {
-    for (i = m_beeper->last_tick; i < PF_SAMPLES; i++)
+    for (i = m_beeper->last_tick; i < PF_SOUND_SAMPLES; i++)
       m_beeper->frequencies[i] = m_beeper->frequency_last;
   }
 
-  for (i = 0; i < PF_SAMPLES; i++, m_beeper->time++)
+  for (i = 0; i < PF_SOUND_SAMPLES; i++, m_beeper->time++)
   {
     if (m_beeper->frequencies[i] == 0)
     {
@@ -71,12 +70,12 @@ void beeper_finish_frame(f8_device_t *device)
     {
       /* Use sine wave to tell if our square wave is on or off */
       double sine = pf_wave((2 * PF_PI * m_beeper->frequencies[i] *
-                             m_beeper->time * PF_PERIOD), FALSE);
+                             m_beeper->time * PF_SOUND_PERIOD), FALSE);
       int mult = sine > 0 ? 1 : 0;
 
       m_beeper->samples[2 * i] = m_beeper->amplitude * mult;
       m_beeper->samples[2 * i + 1] = m_beeper->amplitude * mult;
-      m_beeper->amplitude *= PF_DECAY;
+      m_beeper->amplitude *= PF_SOUND_DECAY;
     }
   }
   m_beeper->last_tick = 0;

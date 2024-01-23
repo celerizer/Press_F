@@ -43,7 +43,6 @@ SOURCES += \
     src/romc.c \
     src/screen.c \
     src/software.c \
-    src/sound.c \
     src/wave.c
 
 HEADERS += \
@@ -74,7 +73,6 @@ HEADERS += \
     src/romc.h \
     src/screen.h \
     src/software.h \
-    src/sound.h \
     src/types.h \
     src/wave.h
 
