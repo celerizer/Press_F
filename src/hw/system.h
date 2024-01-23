@@ -132,4 +132,20 @@ u8 f8_settings_apply_default(f8_system_t *system);
 
 u8 f8_system_init(f8_system_t *system, const system_preset_t *preset);
 
+/**
+ * Finds every F8 device in the system with a given type, and sets the function
+ * pointer used for its IN/INS instruction callback.
+ * Returns the number of devices found and set.
+ */
+unsigned f8_system_set_device_in_cb(f8_system_t *system,
+  const f8_device_id_t type, F8D_OP_IN_T func);
+
+/**
+ * Finds every F8 device in the system with a given type, and sets the function
+ * pointer used for its OUT/OUTS instruction callback.
+ * Returns the number of devices found and set.
+ */
+unsigned f8_system_set_device_out_cb(f8_system_t *system,
+  const f8_device_id_t type, F8D_OP_OUT_T func);
+
 #endif

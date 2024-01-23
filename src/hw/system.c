@@ -219,3 +219,47 @@ u8 f8_settings_apply_default(struct f8_system_t *system)
 
   return f8_settings_apply(system, f8_settings_default);
 }
+
+unsigned f8_system_set_device_out_cb(f8_system_t *system,
+  const f8_device_id_t type, F8D_OP_OUT_T func)
+{
+  unsigned set = 0;
+  unsigned i;
+
+  for (i = 0; i < F8_MAX_IO_PORTS; i++)
+  {
+    io_t *io = &system->io_ports[i];
+
+    if (!io)
+      break;
+    if (io->device_out && io->device_out->type == type)
+    {
+      io->func_out = func;
+      set++;
+    }
+  }
+
+  return set;
+}
+
+unsigned f8_system_set_device_in_cb(f8_system_t *system,
+  const f8_device_id_t type, F8D_OP_IN_T func)
+{
+  unsigned set = 0;
+  unsigned i;
+
+  for (i = 0; i < F8_MAX_IO_PORTS; i++)
+  {
+    io_t *io = &system->io_ports[i];
+
+    if (!io)
+      break;
+    if (io->device_in && io->device_in->type == type)
+    {
+      io->func_in = func;
+      set++;
+    }
+  }
+
+  return set;
+}
