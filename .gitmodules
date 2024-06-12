@@ -1,0 +1,3 @@
+[submodule "src/libpressf"]
+	path = src/libpressf
+	url = http://github.com/celerizer/libpressf

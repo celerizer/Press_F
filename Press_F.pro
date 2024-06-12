@@ -17,64 +17,21 @@ QMAKE_CFLAGS += -std=c89
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+include("src/libpressf/libpressf.pri")
+
 SOURCES += \
-    src/debug.c \
-    src/emu.c \
-    src/font.c \
-    src/frontend/qt/framebuffer_widget.cpp \
-    src/frontend/qt/main.cpp \
-    src/frontend/qt/mainwindow.cpp \
-    src/frontend/qt/registerswindow.cpp \
-    src/frontend/qt/settings.cpp \
-    src/hle.c \
-    src/hw/2102.c \
-    src/hw/2114.c \
-    src/hw/3850.c \
-    src/hw/3851.c \
-    src/hw/beeper.c \
-    src/hw/f8_device.c \
-    src/hw/fairbug_parallel.c \
-    src/hw/hand_controller.c \
-    src/hw/schach_led.c \
-    src/hw/selector_control.c \
-    src/hw/system.c \
-    src/hw/vram.c \
-    src/input.c \
-    src/romc.c \
-    src/screen.c \
-    src/software.c \
-    src/wave.c
+    src/framebuffer_widget.cpp \
+    src/main.cpp \
+    src/mainwindow.cpp \
+    src/registerswindow.cpp \
+    src/settings.cpp
 
 HEADERS += \
-    src/config.h \
-    src/debug.h \
-    src/emu.h \
-    src/font.h \
-    src/frontend/qt/framebuffer_widget.h \
-    src/frontend/qt/main.h \
-    src/frontend/qt/mainwindow.h \
-    src/frontend/qt/registerswindow.h \
-    src/frontend/qt/settings.h \
-    src/hle.h \
-    src/hw/2102.h \
-    src/hw/2114.h \
-    src/hw/3850.h \
-    src/hw/3851.h \
-    src/hw/beeper.h \
-    src/hw/f8_device.h \
-    src/hw/fairbug_parallel.h \
-    src/hw/hand_controller.h \
-    src/hw/kdbug.h \
-    src/hw/schach_led.h \
-    src/hw/selector_control.h \
-    src/hw/system.h \
-    src/hw/vram.h \
-    src/input.h \
-    src/romc.h \
-    src/screen.h \
-    src/software.h \
-    src/types.h \
-    src/wave.h
+    src/framebuffer_widget.h \
+    src/main.h \
+    src/mainwindow.h \
+    src/registerswindow.h \
+    src/settings.h \
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -82,4 +39,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    src/frontend/qt/resources.qrc
+    src/resources.qrc
