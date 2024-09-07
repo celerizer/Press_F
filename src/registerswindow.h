@@ -9,7 +9,7 @@
 
 extern "C"
 {
-  #include <src/types.h>
+  #include "libpressf/src/types.h"
 }
 
 class RegisterLineEdit : public QWidget

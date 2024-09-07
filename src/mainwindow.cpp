@@ -3,11 +3,11 @@
 
 extern "C"
 {
-  #include <src/emu.h>
-  #include <src/font.h>
-  #include <src/input.h>
-  #include <src/hw/beeper.h>
-  #include <src/hw/system.h>
+  #include "libpressf/src/emu.h"
+  #include "libpressf/src/font.h"
+  #include "libpressf/src/input.h"
+  #include "libpressf/src/hw/system.h"
+  #include "libpressf/src/hw/beeper.h"
 }
 
 #include "main.h"
@@ -117,8 +117,8 @@ MainWindow::MainWindow()
       bios_b_data.size() != 1024)
     exit(2);
 
-  memcpy(g_ChannelF.f8devices[1].data, reinterpret_cast<const u8*>(bios_a_data.data()), 1024);
-  memcpy(g_ChannelF.f8devices[2].data, reinterpret_cast<const u8*>(bios_b_data.data()), 1024);
+  f8_write(&g_ChannelF, 0x0000, reinterpret_cast<const u8*>(bios_a_data.data()), 1024);
+  f8_write(&g_ChannelF, 0x0400, reinterpret_cast<const u8*>(bios_b_data.data()), 1024);
 
   /* TODO: Remove */
   RegistersWindow *m_Regs = new RegistersWindow();
@@ -135,8 +135,51 @@ MainWindow::MainWindow()
   setLayout(layout);
 }
 
+static void profile(void)
+{
+#if PF_ROMC
+  QFile file("C:/f8/dump-romc.txt");
+#else
+  QFile file("C:/f8/dump-noromc.txt");
+#endif
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    exit(1);
+  else
+  {
+    FILE* filePointer = fdopen(file.handle(), "w");
+
+    for (unsigned i = 0; i < 10000; i++)
+    {
+      pressf_step(&g_ChannelF);
+      fprintf(filePointer, "A: %02X W: %02X I: %02X PC0: %04X PC1: %04X DC0: %04X DC1: %04X\n",
+              g_ChannelF.main_cpu->accumulator.u,
+              g_ChannelF.main_cpu->status_register,
+              g_ChannelF.main_cpu->isar,
+#if PF_ROMC
+              g_ChannelF.f8devices[0].pc0.u,
+              g_ChannelF.f8devices[0].pc1.u,
+              g_ChannelF.f8devices[0].dc0.u,
+              g_ChannelF.f8devices[0].dc1.u
+#else
+              g_ChannelF.pc0.u,
+              g_ChannelF.pc1.u,
+              g_ChannelF.dc0.u,
+              g_ChannelF.dc1.u
+#endif
+              );
+    }
+
+    fclose(filePointer);
+    file.close();
+
+    exit(0);
+  }
+}
+
 void MainWindow::onFrame()
 {
+  //profile();
   /* Input */
   set_input_button(0, INPUT_TIME, m_Gamepads[0].buttonL1() || wasClicked(0));
   set_input_button(0, INPUT_MODE, m_Gamepads[0].buttonSelect() || wasClicked(1));
@@ -152,14 +195,14 @@ void MainWindow::onFrame()
   set_input_button(4, INPUT_PULL,       m_Gamepads[0].buttonY());
   set_input_button(4, INPUT_PUSH,       m_Gamepads[0].buttonA());
 
-  set_input_button(1, INPUT_RIGHT,      m_Gamepads[1].buttonRight());
-  set_input_button(1, INPUT_LEFT,       m_Gamepads[1].buttonLeft());
-  set_input_button(1, INPUT_BACK,       m_Gamepads[1].buttonDown());
-  set_input_button(1, INPUT_FORWARD,    m_Gamepads[1].buttonUp());
-  set_input_button(1, INPUT_ROTATE_CCW, m_Gamepads[1].buttonX());
-  set_input_button(1, INPUT_ROTATE_CW,  m_Gamepads[1].buttonB());
-  set_input_button(1, INPUT_PULL,       m_Gamepads[1].buttonY());
-  set_input_button(1, INPUT_PUSH,       m_Gamepads[1].buttonA());
+  set_input_button(1, INPUT_RIGHT,      m_Gamepads[0].buttonRight());
+  set_input_button(1, INPUT_LEFT,       m_Gamepads[0].buttonLeft());
+  set_input_button(1, INPUT_BACK,       m_Gamepads[0].buttonDown());
+  set_input_button(1, INPUT_FORWARD,    m_Gamepads[0].buttonUp());
+  set_input_button(1, INPUT_ROTATE_CCW, m_Gamepads[0].buttonX());
+  set_input_button(1, INPUT_ROTATE_CW,  m_Gamepads[0].buttonB());
+  set_input_button(1, INPUT_PULL,       m_Gamepads[0].buttonY());
+  set_input_button(1, INPUT_PUSH,       m_Gamepads[0].buttonA());
 
   /* Emulation loop */
   pressf_run(&g_ChannelF);
@@ -187,12 +230,10 @@ void MainWindow::onFrame()
 
 void MainWindow::onEjectCart()
 {
-  pressf_reset(&g_ChannelF);
-  /*
-  memset(reinterpret_cast<void*>(&(g_ChannelF.rom[ROM_CARTRIDGE])), 0,
-    ROM_CART_SIZE);
-    */
-  //pressf_load_rom(&g_ChannelF);
+  auto dummy = reinterpret_cast<u8*>(calloc(0x0400, 1));
+
+  for (unsigned i = 0; i < 0x1800; i += 0x0400)
+    f8_write(&g_ChannelF, 0x0800 + i, dummy, sizeof(dummy));
 }
 
 bool MainWindow::loadCartridge(QString Filename)

@@ -3,7 +3,7 @@
 
 extern "C"
 {
-  #include <src/hw/system.h>
+  #include "libpressf/src/hw/system.h"
 }
 
 extern f8_system_t g_ChannelF;

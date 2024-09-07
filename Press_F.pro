@@ -20,18 +20,18 @@ QMAKE_CFLAGS += -std=c89
 include("src/libpressf/libpressf.pri")
 
 SOURCES += \
-    src/framebuffer_widget.cpp \
-    src/main.cpp \
-    src/mainwindow.cpp \
-    src/registerswindow.cpp \
-    src/settings.cpp
+  src/framebuffer_widget.cpp \
+  src/main.cpp \
+  src/mainwindow.cpp \
+  src/registerswindow.cpp \
+  src/settings.cpp
 
 HEADERS += \
-    src/framebuffer_widget.h \
-    src/main.h \
-    src/mainwindow.h \
-    src/registerswindow.h \
-    src/settings.h \
+  src/framebuffer_widget.h \
+  src/main.h \
+  src/mainwindow.h \
+  src/registerswindow.h \
+  src/settings.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -39,4 +39,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    src/resources.qrc
+  src/resources.qrc

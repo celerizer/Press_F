@@ -12,7 +12,7 @@
 
 extern "C"
 {
-   #include <src/emu.h>
+  #include "libpressf/src/emu.h"
 }
 
 RegisterLineEdit::RegisterLineEdit(const QString name, void *pointer,
@@ -118,10 +118,10 @@ RegistersWindow::RegistersWindow()
   m_A = new RegisterLineEdit("A (Accumulator)", &g_ChannelF.main_cpu->accumulator);
   m_W = new RegisterLineEdit("W (Status)", &g_ChannelF.main_cpu->status_register);
   m_Isar = new RegisterLineEdit("ISAR (Indirect RAM pointer)", &g_ChannelF.main_cpu->isar);
-  m_Pc0 = new RegisterLineEdit("PC0 (Process counter)", &g_ChannelF.f8devices[0].pc0, 2);
-  m_Pc1 = new RegisterLineEdit("PC1 (Process counter backup)", &g_ChannelF.f8devices[0].pc1, 2);
-  m_Dc0 = new RegisterLineEdit("DC0 (Data counter)", &g_ChannelF.f8devices[0].dc0, 2);
-  m_Dc1 = new RegisterLineEdit("DC1 (Data counter backup)", &g_ChannelF.f8devices[0].dc1, 2);
+  m_Pc0 = new RegisterLineEdit("PC0 (Process counter)", &g_ChannelF.pc0, 2);
+  m_Pc1 = new RegisterLineEdit("PC1 (Process counter backup)", &g_ChannelF.pc1, 2);
+  m_Dc0 = new RegisterLineEdit("DC0 (Data counter)", &g_ChannelF.dc0, 2);
+  m_Dc1 = new RegisterLineEdit("DC1 (Data counter backup)", &g_ChannelF.dc1, 2);
 
   QGroupBox *RegistersGroupBox = new QGroupBox("Registers");
   QGridLayout* RegistersBox = new QGridLayout();

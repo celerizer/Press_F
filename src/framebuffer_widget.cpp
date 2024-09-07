@@ -8,8 +8,8 @@
 
 extern "C"
 {
-  #include <src/screen.h>
-  #include <src/hw/vram.h>
+  #include "libpressf/src/screen.h"
+  #include "libpressf/src/hw/vram.h"
 }
 
 QPfFramebuffer::QPfFramebuffer(QWidget *parent) : QWidget(parent)
@@ -47,8 +47,8 @@ bool QPfFramebuffer::setScale(const QSize& parent)
   if (m_Scale != final_scale)
   {
     m_Scale = final_scale;
-    m_Rect.setSize(QSize(
-      SCREEN_WIDTH * final_scale, SCREEN_HEIGHT * final_scale));
+    m_Rect.setSize(QSize(SCREEN_WIDTH * final_scale,
+                         SCREEN_WIDTH * final_scale * (3.0/4.0)));
   }
 
   /* Center horizontally */

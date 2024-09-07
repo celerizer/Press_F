@@ -6,8 +6,8 @@
 
 extern "C"
 {
-  #include <src/config.h>
-  #include <src/font.h>
+  #include "libpressf/src/config.h"
+  #include "libpressf/src/font.h"
 }
 
 #include "settings.h"
