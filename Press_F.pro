@@ -17,7 +17,29 @@ QMAKE_CFLAGS += -std=c89
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-include("src/libpressf/libpressf.pri")
+SOURCES += \
+  src/libpressf/src/debug.c \
+  src/libpressf/src/dma.c \
+  src/libpressf/src/emu.c \
+  src/libpressf/src/font.c \
+  src/libpressf/src/hle.c \
+  src/libpressf/src/input.c \
+  src/libpressf/src/romc.c \
+  src/libpressf/src/screen.c \
+  src/libpressf/src/software.c \
+  src/libpressf/src/wave.c \
+  src/libpressf/src/hw/2102.c \
+  src/libpressf/src/hw/2114.c \
+  src/libpressf/src/hw/3850.c \
+  src/libpressf/src/hw/3851.c \
+  src/libpressf/src/hw/beeper.c \
+  src/libpressf/src/hw/f8_device.c \
+  src/libpressf/src/hw/fairbug_parallel.c \
+  src/libpressf/src/hw/hand_controller.c \
+  src/libpressf/src/hw/schach_led.c \
+  src/libpressf/src/hw/selector_control.c \
+  src/libpressf/src/hw/system.c \
+  src/libpressf/src/hw/vram.c
 
 SOURCES += \
   src/framebuffer_widget.cpp \
